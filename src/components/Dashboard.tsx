@@ -5,7 +5,6 @@ import Background from './Background'
 import CountdownTimer from './CountdownTimer'
 import TwistedEnvelope from './TwistedEnvelope'
 import { parseDashboardTime } from '../utils/parseDashboardTime'
-import missionathonLogo from '../public/logo.jpeg'
 import SettingsPanel, { type DashboardSettings } from './SettingsPanel'
 
 const settingsStorageKey = 'missionathon-dashboard-settings'
@@ -36,18 +35,19 @@ export default function Dashboard() {
     setIsSettingsOpen(false)
   }
 
-  return (
+return (
     <main className="dashboard">
       <Background />
       <header className="brand" aria-label="Missionathon">
         <motion.img
           className="brand__logo"
-          src={missionathonLogo}
+          src="/logo.jpeg" // <-- Changed from missionathonLogo to "/logo.jpeg"
           alt=""
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1.5, ease: 'easeOut' }}
         />
+
       </header>
       <div className="dashboard__content">
         <CountdownTimer targetTime={releaseTime} />
