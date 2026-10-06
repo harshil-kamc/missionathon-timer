@@ -5,7 +5,7 @@ import Background from './Background'
 import CountdownTimer from './CountdownTimer'
 import TwistedEnvelope from './TwistedEnvelope'
 import { parseDashboardTime } from '../utils/parseDashboardTime'
-import missionathonLogo from '../../logo.jpeg'
+import missionathonLogo from '../assets/logo.jpeg'
 import SettingsPanel, { type DashboardSettings } from './SettingsPanel'
 
 const settingsStorageKey = 'missionathon-dashboard-settings'
