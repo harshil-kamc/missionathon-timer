@@ -59,3 +59,25 @@ test('edits are validated and trimmed', () => {
   assert.equal(p.headline.length, 80);
   assert.equal(p.envelope.body.length, 400);
 });
+
+test('admin password and sign-in tokens', async () => {
+  process.env.CONTROL_PASSWORD = 'test-password-123';
+  const { checkPassword, issueToken, signedIn } = await import('../lib/http.js');
+  assert.equal(checkPassword('wrong'), false);
+  assert.equal(checkPassword('test-password-123'), true);
+  const token = issueToken();
+  assert.equal(signedIn({ headers: { authorization: `Bearer ${token}` } }), true);
+  assert.equal(signedIn({ headers: { authorization: `Bearer ${token}x` } }), false);
+  assert.equal(signedIn({ headers: {} }), false);
+  // Changing the password signs everyone out.
+  process.env.CONTROL_PASSWORD = 'a-different-password';
+  assert.equal(signedIn({ headers: { authorization: `Bearer ${token}` } }), false);
+});
+
+test('envelope images are checked by their bytes', async () => {
+  const { checkImage } = await import('../lib/image.js');
+  const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0]).toString('base64');
+  assert.match(checkImage(`data:image/png;base64,${png}`), /^data:image\/png;base64,/);
+  assert.throws(() => checkImage(`data:image/png;base64,${Buffer.from('<svg/>').toString('base64')}`), /not a valid image/);
+  assert.throws(() => checkImage('javascript:alert(1)'), /PNG, JPEG or WebP/);
+});

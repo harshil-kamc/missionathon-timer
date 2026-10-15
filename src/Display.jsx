@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { useNow, splitDuration, pad } from './time.js';
-import { useTimer } from './store.js';
-import { publicView } from './timer.js';
+import { splitDuration, pad } from './time.js';
+import { ONLINE, api, getToken, remainingMs, useProjector } from './store.js';
+import { defaultTimer } from './timer.js';
 
 // Projector screen. Rotating heist backdrop, logo, huge boxless countdown,
-// and a sealed envelope that opens when the countdown reaches zero. Everything
-// runs in this browser; the control panel (#control) in another window of the
-// same browser drives it.
+// and a sealed envelope that opens when the countdown reaches zero. Online it
+// follows the admin's control panel from anywhere; opened from disk it
+// follows the control panel in this browser.
 
 const BACKGROUNDS = [
   ...Array.from({ length: 10 }, (_, i) => `projector/bg${i + 1}.jpg`),
@@ -19,11 +19,20 @@ const BACKGROUND_MS = 8000;
 
 // preview: show the envelope as it will look, without changing the timer.
 export default function Display({ preview }) {
-  const timer = useTimer();
-  const now = useNow(250);
-  const p = publicView(timer, now);
-  const left = p.remainingSeconds === null ? 0 : remainingMs(p, now);
-  const envelope = preview ? timer.envelope : p.envelope;
+  const { view: p, now, error } = useProjector();
+  const previewEnvelope = usePreviewEnvelope(preview);
+
+  if (!p) {
+    return (
+      <div className="pt">
+        <Backdrop />
+        <div className="pt-loading">{error ? 'Waiting for the Missionathon server…' : 'Synchronizing with the Missionathon server…'}</div>
+      </div>
+    );
+  }
+
+  const left = remainingMs(p, now);
+  const envelope = previewEnvelope || (p.revealed ? p.envelope : null);
   const paused = p.mode === 'duration' && p.status === 'paused';
   const noTime = p.mode === 'target' && !p.targetAt;
 
@@ -57,11 +66,27 @@ export default function Display({ preview }) {
   );
 }
 
-// Exact time left in ms (publicView rounds to whole seconds).
-function remainingMs(p, now) {
-  if (p.mode === 'target') return Math.max(0, Date.parse(p.targetAt) - now);
-  if (p.status === 'running') return Math.max(0, Date.parse(p.endsAt) - now);
-  return p.remainingSeconds * 1000;
+// #preview shows the envelope's current contents without opening it on the
+// projectors. Online this needs the admin sign-in, since the public never
+// gets the contents before zero.
+function usePreviewEnvelope(preview) {
+  const [env, setEnv] = useState(null);
+  useEffect(() => {
+    if (!preview) return setEnv(null);
+    if (!ONLINE) {
+      try {
+        setEnv(JSON.parse(localStorage.getItem('missionathon-timer-state') || 'null')?.envelope || defaultTimer().envelope);
+      } catch {
+        /* nothing saved yet */
+      }
+      return;
+    }
+    if (!getToken()) return;
+    api('/admin')
+      .then(({ timer }) => setEnv(timer.envelope))
+      .catch(() => {});
+  }, [preview]);
+  return env;
 }
 
 // Crossfading full-screen backdrop with a warm red tint.

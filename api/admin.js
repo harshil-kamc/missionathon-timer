@@ -3,7 +3,7 @@
 //   PUT  → edit timer, headline, tagline or envelope text
 //   POST → { action: start | pause | resume | reset | reveal | hide }
 import { loadTimer, saveTimer } from '../lib/store.js';
-import { clock, applyEdit, applyAction } from '../lib/timer.js';
+import { clock, applyEdit, applyAction } from '../src/timer.js';
 import { send, route, readBody, requireSignIn } from '../lib/http.js';
 
 const view = (p) => ({ timer: p, clock: clock(p), serverTime: new Date().toISOString() });

@@ -1,11 +1,27 @@
 import { useEffect, useState } from 'react';
 
-// Uses this computer's clock (no server). Make sure the projector laptop's
-// time is set automatically.
+// Online, every screen uses the server's clock so they all hit zero together
+// even if a laptop clock is wrong. Offline (opened from disk) it uses this
+// computer's clock.
+let offsetMs = 0;
+
+export async function syncClock() {
+  try {
+    const t0 = Date.now();
+    const res = await fetch('api/time', { cache: 'no-store' });
+    const { serverTime } = await res.json();
+    offsetMs = Date.parse(serverTime) + (Date.now() - t0) / 2 - Date.now();
+  } catch {
+    /* keep previous offset */
+  }
+}
+
+export const now = () => Date.now() + offsetMs;
+
 export function useNow(intervalMs = 1000) {
-  const [t, setT] = useState(Date.now());
+  const [t, setT] = useState(now());
   useEffect(() => {
-    const iv = setInterval(() => setT(Date.now()), intervalMs);
+    const iv = setInterval(() => setT(now()), intervalMs);
     return () => clearInterval(iv);
   }, [intervalMs]);
   return t;

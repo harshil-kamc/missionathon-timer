@@ -1,35 +1,27 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNow, formatClock, fmtDateTime, toLocalInput, fromLocalInput } from './time.js';
-import { useTimer, loadTimer, saveTimer } from './store.js';
-import { clock, applyEdit, applyAction } from './timer.js';
+import { ONLINE, api, getToken, setToken, useAdminTimer, SignedOut } from './store.js';
+import { clock } from './timer.js';
 
-// Control panel. Open it in a second window on the projector computer
-// (index.html#control); the projector window follows every change.
+// Control panel (#control). Online: admin sign-in, and every projector screen
+// opened from the website follows it. Opened from disk: no sign-in, and it
+// drives projector windows in this browser only.
 
 const MAX_IMAGE_SIDE = 1920;
 
 export default function Control() {
+  const [signedIn, setSignedIn] = useState(!ONLINE || Boolean(getToken()));
   const [toasts, setToasts] = useState([]);
   const toast = useCallback((text, tone = 'ok') => {
     const id = Math.random();
     setToasts((t) => [...t, { id, text, tone }]);
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 4000);
   }, []);
-
-  // Every change starts from the latest saved state, so two open control
-  // windows can't overwrite each other with stale data.
-  const change = useCallback(
-    (fn, msg) => {
-      try {
-        const p = loadTimer();
-        fn(p);
-        saveTimer(p);
-        if (msg) toast(msg);
-        return true;
-      } catch (e) {
-        toast(e.message, 'error');
-        return false;
-      }
+  const signOut = useCallback(
+    (msg) => {
+      setToken(null);
+      setSignedIn(false);
+      if (msg) toast(msg, 'error');
     },
     [toast]
   );
@@ -39,12 +31,15 @@ export default function Control() {
       <header className="ctl-top">
         <img src="projector/missionathon-logo.png" alt="Missionathon" className="ctl-logo" />
         <div className="ctl-top-right">
-          <span className="kicker">Projector control</span>
+          <span className="kicker">{ONLINE ? 'Admin control' : 'Projector control · offline'}</span>
+          {ONLINE && signedIn && (
+            <button type="button" className="btn btn-sm btn-ghost" onClick={() => signOut()}>
+              Sign out
+            </button>
+          )}
         </div>
       </header>
-      <main className="ctl-main">
-        <Panel change={change} />
-      </main>
+      <main className="ctl-main">{signedIn ? <Panel toast={toast} signOut={signOut} /> : <SignIn onDone={() => setSignedIn(true)} />}</main>
       <div className="toasts" role="status">
         {toasts.map((t) => (
           <div key={t.id} className={`toast ${t.tone === 'error' ? 'toast-error' : ''}`}>
@@ -56,18 +51,90 @@ export default function Control() {
   );
 }
 
-function Panel({ change }) {
-  const p = useTimer();
+function SignIn({ onDone }) {
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  async function submit(e) {
+    e.preventDefault();
+    setBusy(true);
+    setError('');
+    try {
+      const { token } = await api('/login', { method: 'POST', body: { password } });
+      setToken(token);
+      onDone();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <form className="panel ctl-signin" onSubmit={submit}>
+      <div className="kicker">Restricted access</div>
+      <h1 className="panel-title">Admin sign-in</h1>
+      <p className="muted">Enter the admin password to control every Missionathon timer screen.</p>
+      <label className="field">
+        <span className="field-label">Password</span>
+        <input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} autoFocus />
+      </label>
+      {error && <p className="field-msg">{error}</p>}
+      <button className="btn btn-primary btn-block" disabled={busy || !password}>
+        {busy ? 'Checking…' : 'Enter the vault'}
+      </button>
+      <a className="ctl-link" href="#">
+        Open the projector screen →
+      </a>
+    </form>
+  );
+}
+
+function Panel({ toast, signOut }) {
+  const { timer: p, loadError, reload, ...ops } = useAdminTimer({ onSignedOut: signOut });
   const now = useNow(250);
+
+  // Runs a change and reports the result.
+  const run = useCallback(
+    async (fn, msg) => {
+      try {
+        await fn();
+        if (msg) toast(msg);
+        return true;
+      } catch (e) {
+        if (!(e instanceof SignedOut)) toast(e.message, 'error');
+        return false;
+      }
+    },
+    [toast]
+  );
+
+  if (!p) {
+    return loadError ? (
+      <div className="panel">
+        <p className="note note-red">{loadError}</p>
+        <button type="button" className="btn" onClick={reload}>
+          Try again
+        </button>
+      </div>
+    ) : (
+      <div className="panel muted">Loading…</div>
+    );
+  }
+
   const c = clock(p, now);
   const left = c.remainingMs ?? 0;
   const open = c.revealed;
-  const control = (action, msg) => change((x) => applyAction(x, action, Date.now()), msg);
+  const control = (action, msg) => run(() => ops.action(action), msg);
   const state = open ? ['Envelope open', 'green'] : p.mode === 'duration' ? { idle: ['Not started', 'muted'], running: ['Counting down', 'blue'], paused: ['Paused', 'amber'] }[p.status] : p.targetAt ? ['Counting down', 'blue'] : ['No time set', 'muted'];
 
   return (
     <div className="stack-lg">
-      <p className="note">Keep this panel and the projector screen open in the same browser on this computer. Drag the projector window to the projector and press F11 for full screen.</p>
+      {loadError && <p className="note note-amber">Connection problem: {loadError}. Retrying…</p>}
+      <p className="note">
+        {ONLINE
+          ? 'Every projector screen opened from this website follows these controls, on any device. Open it on the projector and press F11 for full screen.'
+          : 'Offline mode: this panel controls projector windows in this browser on this computer only. Drag the projector window to the projector and press F11.'}
+      </p>
       <section className="panel">
         <div className="panel-head">
           <div>
@@ -128,13 +195,13 @@ function Panel({ change }) {
         {open && p.mode === 'target' && Date.parse(p.targetAt) <= now && <p className="note note-amber mt">The countdown time has passed. To show the timer again, set a new time below.</p>}
       </section>
 
-      <TimerSettings p={p} change={change} />
-      <EnvelopeSettings p={p} change={change} />
+      <TimerSettings p={p} run={run} ops={ops} />
+      <EnvelopeSettings p={p} run={run} ops={ops} toast={toast} />
     </div>
   );
 }
 
-function TimerSettings({ p, change }) {
+function TimerSettings({ p, run, ops }) {
   const [mode, setMode] = useState(p.mode);
   const [target, setTarget] = useState(toLocalInput(p.targetAt));
   const [dur, setDur] = useState(() => splitHms(p.durationSeconds));
@@ -145,7 +212,7 @@ function TimerSettings({ p, change }) {
   const seconds = Number(dur.h || 0) * 3600 + Number(dur.m || 0) * 60 + Number(dur.s || 0);
   function save() {
     const body = { mode, headline, tagline, ...(mode === 'target' ? { targetAt: fromLocalInput(target) } : { durationSeconds: seconds }) };
-    change((x) => applyEdit(x, body), 'Timer saved');
+    run(() => ops.edit(body), 'Timer saved');
   }
 
   return (
@@ -166,7 +233,7 @@ function TimerSettings({ p, change }) {
           <label className="field">
             <span className="field-label">Envelope opens at</span>
             <input type="datetime-local" value={target} onChange={(e) => setTarget(e.target.value)} />
-            <span className="field-hint">Uses this computer's clock.</span>
+            <span className="field-hint">In this device's time zone.</span>
           </label>
         ) : (
           <div className="field">
@@ -197,23 +264,19 @@ function TimerSettings({ p, change }) {
   );
 }
 
-function EnvelopeSettings({ p, change }) {
+function EnvelopeSettings({ p, run, ops, toast }) {
   const [env, setEnv] = useState({ kicker: p.envelope.kicker, title: p.envelope.title, body: p.envelope.body });
   const [busy, setBusy] = useState(false);
 
   async function upload(file) {
     if (!file) return;
-    if (!/^image\/(png|jpeg|webp)$/.test(file.type)) return change(() => {
-      throw new Error('Choose a PNG, JPEG or WebP image');
-    });
+    if (!/^image\/(png|jpeg|webp)$/.test(file.type)) return toast('Choose a PNG, JPEG or WebP image', 'error');
     setBusy(true);
     try {
       const dataUrl = await shrinkImage(file);
-      change((x) => (x.envelope.image = dataUrl), 'Image added');
+      await run(() => ops.setImage(dataUrl), 'Image added');
     } catch (e) {
-      change(() => {
-        throw e;
-      });
+      toast(e.message, 'error');
     } finally {
       setBusy(false);
     }
@@ -238,7 +301,7 @@ function EnvelopeSettings({ p, change }) {
           <textarea rows={3} maxLength={400} value={env.body} onChange={(e) => setEnv({ ...env, body: e.target.value })} />
         </label>
       </div>
-      <button type="button" className="btn btn-primary" onClick={() => change((x) => applyEdit(x, { envelope: env }), 'Envelope saved')}>
+      <button type="button" className="btn btn-primary" onClick={() => run(() => ops.edit({ envelope: env }), 'Envelope saved')}>
         Save envelope text
       </button>
 
@@ -256,7 +319,7 @@ function EnvelopeSettings({ p, change }) {
           <input type="file" accept="image/png,image/jpeg,image/webp" hidden disabled={busy} onChange={(e) => (upload(e.target.files[0]), (e.target.value = ''))} />
         </label>
         {p.envelope.image && (
-          <button type="button" className="btn btn-sm btn-danger-ghost" onClick={() => window.confirm('Remove the envelope image?') && change((x) => (x.envelope.image = null), 'Image removed')}>
+          <button type="button" className="btn btn-sm btn-danger-ghost" onClick={() => window.confirm('Remove the envelope image?') && run(() => ops.setImage(null), 'Image removed')}>
             Remove image
           </button>
         )}
