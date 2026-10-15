@@ -1,19 +1,41 @@
-# Missionathon Live Dashboard
+# Missionathon Timer
 
-A single-screen, projector-friendly countdown and automatically released classified hint envelope.
+Projector countdown for Missionathon 2026, with a password-protected control page.
 
-## Start
+- `/` – projector screen (public, no sign-in). Rotating backgrounds, logo, countdown, and a sealed envelope that opens at 00:00:00.
+- `/control` – control page (shared password). Set a target time or a duration, start/pause/resume/reset, edit the headline and bottom line, write the envelope text, upload an envelope image, open the envelope early or go back to the timer.
 
-Run `npm install`, then `npm run dev` from this folder.
+The envelope's contents are never sent to the projector screen before zero.
 
-## Mission Configuration
+## Deploy on Vercel
 
-Use the gear button in the lower-right corner to update the live mission settings. Changes are saved in this browser and persist after refresh. `src/config/dashboardConfig.ts` supplies the initial defaults:
+1. Put this folder in a GitHub repo (private is fine) and import it in Vercel (**Add New → Project**). Vercel detects Vite; keep the defaults.
+2. In the Vercel project, **Storage → Upstash (Redis) → Create** (free plan) and connect it to the project. This stores the timer.
+3. **Storage → Blob → Create** and connect it to the project. This stores the envelope image.
+4. **Settings → Environment Variables**: add `CONTROL_PASSWORD` (at least 8 characters).
+5. **Deployments → latest → Redeploy** so the new settings take effect.
 
-- `targetTime`: the exact reveal date and time. Timestamps without a timezone offset are interpreted as IST.
-- `missionTitle` and `missionText`: content shown when the dossier opens.
-- `missionImage`: optional full image URL or public path, such as `/mission-image.jpg`; place local images in `public/`.
+Check: `https://<your-project>.vercel.app/api/state` should return JSON with `"timer"`, and `/control` should accept the password.
 
-The mission card is not rendered until the release time. This is a visual reveal only: values included in a frontend build can be inspected by visitors, so do not put confidential information here. `src/config/timerConfig.ts` remains a legacy-compatible re-export.
+Optional: in `vercel.json`, add `"regions": ["bom1"]` to run the server in Mumbai (pick a Mumbai Redis region to match).
 
-The timer requests the locally installed `Compacta BT` font and falls back to a condensed system font if it is unavailable. Supply a properly licensed font file if the site needs the exact typeface on every device.
+## Run on your own computer
+
+Needs Node.js 20 or newer.
+
+```
+npm install
+copy .env.example .env.local     (then put a CONTROL_PASSWORD in .env.local)
+npm run dev
+```
+
+Open http://localhost:5174 (projector) and http://localhost:5174/control. Without Redis/Blob it saves to a local `.data/` folder.
+
+`npm test` runs the timer and sign-in tests.
+
+## Files
+
+- `src/` – the two pages (`Display.jsx` projector, `Control.jsx` control page) and styles
+- `api/` – server routes Vercel runs: `state`, `time`, `login`, `admin`, `image`
+- `lib/` – timer rules, storage, sign-in and image handling
+- `public/projector/` – logo and background images (film stills: fine for the event screen, not for promotion)
