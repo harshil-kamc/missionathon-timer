@@ -1,21 +1,24 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { defaultTimer, clock, publicView, applyEdit, applyAction, InputError } from '../lib/timer.js';
-
-process.env.CONTROL_PASSWORD = 'test-password-123';
-const { checkPassword, issueToken, signedIn } = await import('../lib/http.js');
+import { defaultTimer, clock, publicView, applyEdit, applyAction, InputError } from '../src/timer.js';
 
 const T = Date.parse('2026-10-16T03:00:00Z');
+const TARGET = '2026-10-16T03:30:00.000Z';
 
 test('target mode hides the envelope until zero', () => {
-  const p = defaultTimer();
+  const p = applyEdit(defaultTimer(), { mode: 'target', targetAt: TARGET });
   const before = publicView(p, T);
   assert.equal(before.revealed, false);
   assert.equal(before.envelope, null);
   assert.equal(before.remainingSeconds, 30 * 60);
-  const after = publicView(p, Date.parse(p.targetAt));
+  const after = publicView(p, Date.parse(TARGET));
   assert.equal(after.revealed, true);
   assert.equal(after.envelope.title, p.envelope.title);
+});
+
+test('target mode with no time set stays closed', () => {
+  const p = applyEdit(defaultTimer(), { mode: 'target' });
+  assert.equal(publicView(p, T).revealed, false);
 });
 
 test('open now reveals early, back to timer hides again', () => {
@@ -43,7 +46,8 @@ test('duration mode: start, pause, resume, reset', () => {
 });
 
 test('start is refused in target mode', () => {
-  assert.throws(() => applyAction(defaultTimer(), 'start', T), /duration mode/);
+  const p = applyEdit(defaultTimer(), { mode: 'target', targetAt: TARGET });
+  assert.throws(() => applyAction(p, 'start', T), /duration mode/);
 });
 
 test('edits are validated and trimmed', () => {
@@ -54,16 +58,4 @@ test('edits are validated and trimmed', () => {
   applyEdit(p, { headline: 'x'.repeat(200), envelope: { body: 'y'.repeat(900) } });
   assert.equal(p.headline.length, 80);
   assert.equal(p.envelope.body.length, 400);
-});
-
-test('control password and sign-in tokens', () => {
-  assert.equal(checkPassword('wrong'), false);
-  assert.equal(checkPassword('test-password-123'), true);
-  const token = issueToken();
-  assert.equal(signedIn({ headers: { authorization: `Bearer ${token}` } }), true);
-  assert.equal(signedIn({ headers: { authorization: `Bearer ${token}x` } }), false);
-  assert.equal(signedIn({ headers: {} }), false);
-  // Changing the password signs everyone out.
-  process.env.CONTROL_PASSWORD = 'a-different-password';
-  assert.equal(signedIn({ headers: { authorization: `Bearer ${token}` } }), false);
 });

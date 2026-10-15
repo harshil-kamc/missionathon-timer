@@ -1,74 +1,31 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useServerNow, splitDuration, remainingMs, pad } from './time.js';
-import { api, getToken } from './api.js';
+import { useEffect, useState } from 'react';
+import { useNow, splitDuration, pad } from './time.js';
+import { useTimer } from './store.js';
+import { publicView } from './timer.js';
 
-// Projector screen (public, no sign-in). Rotating heist backdrop, logo, huge
-// boxless countdown, and a sealed envelope that opens only when the countdown
-// reaches zero. The envelope's contents come from the server only then.
+// Projector screen. Rotating heist backdrop, logo, huge boxless countdown,
+// and a sealed envelope that opens when the countdown reaches zero. Everything
+// runs in this browser; the control panel (#control) in another window of the
+// same browser drives it.
 
 const BACKGROUNDS = [
-  ...Array.from({ length: 10 }, (_, i) => `/projector/bg${i + 1}.jpg`),
-  '/projector/bg-crew.jpg',
-  '/projector/bg-planning-room.jpg',
-  '/projector/bg-mask.jpg',
+  ...Array.from({ length: 10 }, (_, i) => `projector/bg${i + 1}.jpg`),
+  'projector/bg-crew.jpg',
+  'projector/bg-planning-room.jpg',
+  'projector/bg-mask.jpg',
 ];
-const LOGO = '/projector/missionathon-logo.png';
+const LOGO = 'projector/missionathon-logo.png';
 const BACKGROUND_MS = 8000;
-const POLL_MS = 3000;
 
-export default function Display() {
-  const [p, setP] = useState(null);
-  const [err, setErr] = useState(false);
-  const now = useServerNow(250);
-  const preview = usePreviewEnvelope();
-
-  const load = useCallback(
-    () =>
-      fetch('/api/state')
-        .then((r) => (r.ok ? r.json() : Promise.reject()))
-        .then((d) => {
-          setP(d.timer);
-          setErr(false);
-        })
-        .catch(() => setErr(true)),
-    []
-  );
-
-  useEffect(() => {
-    load();
-    const iv = setInterval(load, POLL_MS);
-    return () => clearInterval(iv);
-  }, [load]);
-
-  // At zero, ask the server straight away (and every second until it agrees)
-  // so the envelope opens on time rather than at the next regular poll.
-  const left = p ? remainingMs(p, now) : null;
-  const atZero = p && !p.revealed && left === 0 && (p.mode === 'target' ? Boolean(p.targetAt) : p.status === 'running');
-  const retry = useRef(0);
-  useEffect(() => {
-    if (!atZero) {
-      retry.current = 0;
-      return;
-    }
-    if (retry.current > 20) return;
-    const t = setTimeout(() => {
-      retry.current += 1;
-      load();
-    }, retry.current ? 1000 : 50);
-    return () => clearTimeout(t);
-  }, [atZero, p, load]);
-
-  if (!p) {
-    return (
-      <div className="pt">
-        <Backdrop />
-        <div className="pt-loading">{err ? 'Waiting for the Missionathon server…' : 'Synchronizing with the Missionathon server…'}</div>
-      </div>
-    );
-  }
-
-  const envelope = preview || (p.revealed ? p.envelope : null);
+// preview: show the envelope as it will look, without changing the timer.
+export default function Display({ preview }) {
+  const timer = useTimer();
+  const now = useNow(250);
+  const p = publicView(timer, now);
+  const left = p.remainingSeconds === null ? 0 : remainingMs(p, now);
+  const envelope = preview ? timer.envelope : p.envelope;
   const paused = p.mode === 'duration' && p.status === 'paused';
+  const noTime = p.mode === 'target' && !p.targetAt;
 
   return (
     <div className="pt">
@@ -79,12 +36,13 @@ export default function Display() {
         </header>
 
         {envelope ? (
-          <Envelope key={`${envelope.title}|${envelope.image}`} envelope={envelope} />
+          <Envelope key={`${envelope.title}|${envelope.image ? envelope.image.length : 0}`} envelope={envelope} />
         ) : (
           <section className="pt-countdown-stage">
             {p.headline && <div className="pt-phase">{p.headline}</div>}
-            <Timer ms={left ?? 0} paused={paused} />
+            <Timer ms={left} paused={paused} />
             {paused && <div className="pt-alert">Timer paused</div>}
+            {noTime && <div className="pt-alert">Set the time in the control panel</div>}
           </section>
         )}
 
@@ -97,6 +55,13 @@ export default function Display() {
       </main>
     </div>
   );
+}
+
+// Exact time left in ms (publicView rounds to whole seconds).
+function remainingMs(p, now) {
+  if (p.mode === 'target') return Math.max(0, Date.parse(p.targetAt) - now);
+  if (p.status === 'running') return Math.max(0, Date.parse(p.endsAt) - now);
+  return p.remainingSeconds * 1000;
 }
 
 // Crossfading full-screen backdrop with a warm red tint.
@@ -118,19 +83,6 @@ function Backdrop() {
       <div className="pt-bg-tint" />
     </div>
   );
-}
-
-// /?preview lets a signed-in controller rehearse the envelope with its
-// current contents before zero (the public never gets them early).
-function usePreviewEnvelope() {
-  const [env, setEnv] = useState(null);
-  useEffect(() => {
-    if (!new URLSearchParams(window.location.search).has('preview') || !getToken()) return;
-    api('/admin')
-      .then(({ timer }) => setEnv(timer.envelope))
-      .catch(() => {});
-  }, []);
-  return env;
 }
 
 // Boxless digits with their labels at the lower right.
@@ -170,7 +122,7 @@ function Envelope({ envelope }) {
                 <img src={envelope.image} alt={envelope.title || 'Mission reveal'} />
               </div>
             ) : (
-              <div className="pt-card-media" style={{ backgroundImage: 'url("/projector/bg3.jpg")' }} />
+              <div className="pt-card-media" style={{ backgroundImage: 'url("projector/bg3.jpg")' }} />
             )}
             {hasText && (
               <div className="pt-card-content">

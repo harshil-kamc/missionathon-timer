@@ -2,22 +2,25 @@
   "name": "missionathon-timer",
   "version": "1.0.0",
   "private": true,
-  "description": "Missionathon 2026 projector countdown with a remote control page",
+  "description": "Missionathon 2026 projector countdown (static, runs fully in the browser)",
   "type": "module",
   "scripts": {
-    "dev": "node --env-file-if-exists=.env.local dev-server.js",
+    "dev": "vite --port 5174",
     "build": "vite build",
+    "preview": "vite preview --port 5174",
     "test": "node --test"
   },
   "dependencies": {
-    "@upstash/redis": "1.34.3",
-    "@vercel/blob": "2.8.1",
+    "@fontsource/anton": "5.1.0",
+    "@fontsource/dm-sans": "5.1.0",
+    "@fontsource/ibm-plex-mono": "5.1.0",
     "react": "18.3.1",
     "react-dom": "18.3.1"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "4.3.4",
-    "vite": "5.4.21"
+    "vite": "5.4.21",
+    "vite-plugin-singlefile": "2.0.3"
   },
   "engines": {
     "node": ">=20"

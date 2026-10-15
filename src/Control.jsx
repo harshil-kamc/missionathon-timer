@@ -1,42 +1,50 @@
 import { useCallback, useEffect, useState } from 'react';
-import { api, getToken, setToken, SignedOut } from './api.js';
-import { useServerNow, formatClock, fmtDateTime, toLocalInput, fromLocalInput, remainingMs } from './time.js';
+import { useNow, formatClock, fmtDateTime, toLocalInput, fromLocalInput } from './time.js';
+import { useTimer, loadTimer, saveTimer } from './store.js';
+import { clock, applyEdit, applyAction } from './timer.js';
 
-// Control page for the projector screen: works from any phone or laptop
-// signed in with the shared control password.
+// Control panel. Open it in a second window on the projector computer
+// (index.html#control); the projector window follows every change.
 
-const MAX_UPLOAD_BYTES = 3 * 1024 * 1024;
-const MAX_IMAGE_SIDE = 2400;
-const POLL_MS = 5000;
+const MAX_IMAGE_SIDE = 1920;
 
 export default function Control() {
-  const [signedIn, setSignedIn] = useState(Boolean(getToken()));
   const [toasts, setToasts] = useState([]);
   const toast = useCallback((text, tone = 'ok') => {
     const id = Math.random();
     setToasts((t) => [...t, { id, text, tone }]);
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 4000);
   }, []);
-  const signOut = useCallback((msg) => {
-    setToken(null);
-    setSignedIn(false);
-    if (msg) toast(msg, 'error');
-  }, [toast]);
+
+  // Every change starts from the latest saved state, so two open control
+  // windows can't overwrite each other with stale data.
+  const change = useCallback(
+    (fn, msg) => {
+      try {
+        const p = loadTimer();
+        fn(p);
+        saveTimer(p);
+        if (msg) toast(msg);
+        return true;
+      } catch (e) {
+        toast(e.message, 'error');
+        return false;
+      }
+    },
+    [toast]
+  );
 
   return (
     <div className="ctl">
       <header className="ctl-top">
-        <img src="/projector/missionathon-logo.png" alt="Missionathon" className="ctl-logo" />
+        <img src="projector/missionathon-logo.png" alt="Missionathon" className="ctl-logo" />
         <div className="ctl-top-right">
           <span className="kicker">Projector control</span>
-          {signedIn && (
-            <button type="button" className="btn btn-sm btn-ghost" onClick={() => signOut()}>
-              Sign out
-            </button>
-          )}
         </div>
       </header>
-      <main className="ctl-main">{signedIn ? <Dashboard toast={toast} signOut={signOut} /> : <SignIn onDone={() => setSignedIn(true)} />}</main>
+      <main className="ctl-main">
+        <Panel change={change} />
+      </main>
       <div className="toasts" role="status">
         {toasts.map((t) => (
           <div key={t.id} className={`toast ${t.tone === 'error' ? 'toast-error' : ''}`}>
@@ -48,107 +56,18 @@ export default function Control() {
   );
 }
 
-function SignIn({ onDone }) {
-  const [password, setPassword] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  async function submit(e) {
-    e.preventDefault();
-    setBusy(true);
-    setError('');
-    try {
-      const { token } = await api('/login', { method: 'POST', body: { password } });
-      setToken(token);
-      onDone();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-  return (
-    <form className="panel ctl-signin" onSubmit={submit}>
-      <div className="kicker">Restricted access</div>
-      <h1 className="panel-title">Control room</h1>
-      <p className="muted">Enter the control password to run the projector timer.</p>
-      <label className="field">
-        <span className="field-label">Password</span>
-        <input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} autoFocus />
-      </label>
-      {error && <p className="field-msg">{error}</p>}
-      <button className="btn btn-primary btn-block" disabled={busy || !password}>
-        {busy ? 'Checking…' : 'Enter the vault'}
-      </button>
-      <a className="ctl-link" href="/">
-        Open the projector screen →
-      </a>
-    </form>
-  );
-}
-
-function Dashboard({ toast, signOut }) {
-  const now = useServerNow(250);
-  const [data, setData] = useState(null);
-  const [loadError, setLoadError] = useState('');
-
-  const handle = useCallback(
-    (e) => {
-      if (e instanceof SignedOut) signOut(e.message);
-      else toast(e.message, 'error');
-    },
-    [signOut, toast]
-  );
-
-  const load = useCallback(
-    () =>
-      api('/admin')
-        .then((d) => {
-          setData(d);
-          setLoadError('');
-        })
-        .catch((e) => (e instanceof SignedOut ? signOut(e.message) : setLoadError(e.message))),
-    [signOut]
-  );
-
-  useEffect(() => {
-    load();
-    const iv = setInterval(load, POLL_MS);
-    return () => clearInterval(iv);
-  }, [load]);
-
-  async function call(path, method, body, msg) {
-    try {
-      setData(await api(path, { method, body }));
-      if (msg) toast(msg);
-      return true;
-    } catch (e) {
-      handle(e);
-      return false;
-    }
-  }
-  const control = (action, msg) => call('/admin', 'POST', { action }, msg);
-
-  if (!data) {
-    return loadError ? (
-      <div className="panel">
-        <p className="note note-red">{loadError}</p>
-        <button type="button" className="btn" onClick={load}>
-          Try again
-        </button>
-      </div>
-    ) : (
-      <div className="panel muted">Loading…</div>
-    );
-  }
-
-  const p = data.timer;
-  const left = remainingMs(p, now) ?? 0;
-  const open = data.clock.revealed || (p.mode === 'target' ? left === 0 : p.status === 'running' && left === 0);
-  const state = open ? ['Envelope open', 'green'] : p.mode === 'duration' ? { idle: ['Not started', 'muted'], running: ['Counting down', 'blue'], paused: ['Paused', 'amber'] }[p.status] : ['Counting down', 'blue'];
+function Panel({ change }) {
+  const p = useTimer();
+  const now = useNow(250);
+  const c = clock(p, now);
+  const left = c.remainingMs ?? 0;
+  const open = c.revealed;
+  const control = (action, msg) => change((x) => applyAction(x, action, Date.now()), msg);
+  const state = open ? ['Envelope open', 'green'] : p.mode === 'duration' ? { idle: ['Not started', 'muted'], running: ['Counting down', 'blue'], paused: ['Paused', 'amber'] }[p.status] : p.targetAt ? ['Counting down', 'blue'] : ['No time set', 'muted'];
 
   return (
     <div className="stack-lg">
-      {loadError && <p className="note note-amber">Connection problem: {loadError}. Retrying…</p>}
+      <p className="note">Keep this panel and the projector screen open in the same browser on this computer. Drag the projector window to the projector and press F11 for full screen.</p>
       <section className="panel">
         <div className="panel-head">
           <div>
@@ -156,10 +75,10 @@ function Dashboard({ toast, signOut }) {
             <h2 className="panel-title">{open ? 'Envelope is open' : 'Countdown'}</h2>
           </div>
           <div className="panel-actions">
-            <a className="btn btn-sm btn-ghost" href="/" target="_blank" rel="noopener">
+            <a className="btn btn-sm btn-ghost" href="#" target="_blank" rel="noopener">
               Open projector ↗
             </a>
-            <a className="btn btn-sm btn-ghost" href="/?preview" target="_blank" rel="noopener">
+            <a className="btn btn-sm btn-ghost" href="#preview" target="_blank" rel="noopener">
               Preview envelope ↗
             </a>
           </div>
@@ -169,7 +88,7 @@ function Dashboard({ toast, signOut }) {
           <span className={`badge badge-${state[1]}`}>{state[0]}</span>
         </div>
         <p className="muted small">
-          {p.mode === 'target' ? `Counts down to ${fmtDateTime(p.targetAt)}.` : `Runs for ${formatClock(p.durationSeconds * 1000)} once started.`} The envelope opens by itself at 00:00:00, and its contents stay hidden from the public until then.
+          {p.mode === 'target' ? (p.targetAt ? `Counts down to ${fmtDateTime(p.targetAt)}.` : 'Set the time below.') : `Runs for ${formatClock(p.durationSeconds * 1000)} once started.`} The envelope opens by itself at 00:00:00.
         </p>
         <div className="row wrap">
           {p.mode === 'duration' && !open && (
@@ -209,27 +128,24 @@ function Dashboard({ toast, signOut }) {
         {open && p.mode === 'target' && Date.parse(p.targetAt) <= now && <p className="note note-amber mt">The countdown time has passed. To show the timer again, set a new time below.</p>}
       </section>
 
-      <TimerSettings p={p} call={call} />
-      <EnvelopeSettings p={p} call={call} toast={toast} />
+      <TimerSettings p={p} change={change} />
+      <EnvelopeSettings p={p} change={change} />
     </div>
   );
 }
 
-function TimerSettings({ p, call }) {
+function TimerSettings({ p, change }) {
   const [mode, setMode] = useState(p.mode);
   const [target, setTarget] = useState(toLocalInput(p.targetAt));
   const [dur, setDur] = useState(() => splitHms(p.durationSeconds));
   const [headline, setHeadline] = useState(p.headline);
   const [tagline, setTagline] = useState(p.tagline);
-  const [busy, setBusy] = useState(false);
   useEffect(() => setMode(p.mode), [p.mode]);
 
   const seconds = Number(dur.h || 0) * 3600 + Number(dur.m || 0) * 60 + Number(dur.s || 0);
-  async function save() {
-    setBusy(true);
+  function save() {
     const body = { mode, headline, tagline, ...(mode === 'target' ? { targetAt: fromLocalInput(target) } : { durationSeconds: seconds }) };
-    await call('/admin', 'PUT', body, 'Timer saved');
-    setBusy(false);
+    change((x) => applyEdit(x, body), 'Timer saved');
   }
 
   return (
@@ -237,11 +153,11 @@ function TimerSettings({ p, call }) {
       <div className="kicker">Step 1</div>
       <h2 className="panel-title mb">Timer</h2>
       <div className="segmented" role="radiogroup" aria-label="Timer type">
-        <button type="button" role="radio" aria-checked={mode === 'target'} className={mode === 'target' ? 'on' : ''} onClick={() => setMode('target')}>
-          Count down to a time
-        </button>
         <button type="button" role="radio" aria-checked={mode === 'duration'} className={mode === 'duration' ? 'on' : ''} onClick={() => setMode('duration')}>
           Run for a set duration
+        </button>
+        <button type="button" role="radio" aria-checked={mode === 'target'} className={mode === 'target' ? 'on' : ''} onClick={() => setMode('target')}>
+          Count down to a time
         </button>
       </div>
 
@@ -250,7 +166,7 @@ function TimerSettings({ p, call }) {
           <label className="field">
             <span className="field-label">Envelope opens at</span>
             <input type="datetime-local" value={target} onChange={(e) => setTarget(e.target.value)} />
-            <span className="field-hint">In this device's time zone.</span>
+            <span className="field-hint">Uses this computer's clock.</span>
           </label>
         ) : (
           <div className="field">
@@ -273,43 +189,39 @@ function TimerSettings({ p, call }) {
           <input value={tagline} maxLength={120} onChange={(e) => setTagline(e.target.value)} />
         </label>
       </div>
-      <button type="button" className="btn btn-primary" disabled={busy || (mode === 'duration' && seconds < 1) || (mode === 'target' && !target)} onClick={save}>
-        {busy ? 'Saving…' : 'Save timer'}
+      <button type="button" className="btn btn-primary" disabled={(mode === 'duration' && seconds < 1) || (mode === 'target' && !target)} onClick={save}>
+        Save timer
       </button>
       {mode !== p.mode && <p className="muted small mt-sm">Save to switch the projector to this timer type.</p>}
     </section>
   );
 }
 
-function EnvelopeSettings({ p, call, toast }) {
+function EnvelopeSettings({ p, change }) {
   const [env, setEnv] = useState({ kicker: p.envelope.kicker, title: p.envelope.title, body: p.envelope.body });
   const [busy, setBusy] = useState(false);
-  const [uploading, setUploading] = useState(false);
-
-  async function save() {
-    setBusy(true);
-    await call('/admin', 'PUT', { envelope: env }, 'Envelope saved');
-    setBusy(false);
-  }
 
   async function upload(file) {
     if (!file) return;
-    if (!/^image\/(png|jpeg|webp)$/.test(file.type)) return toast('Choose a PNG, JPEG or WebP image', 'error');
-    setUploading(true);
+    if (!/^image\/(png|jpeg|webp)$/.test(file.type)) return change(() => {
+      throw new Error('Choose a PNG, JPEG or WebP image');
+    });
+    setBusy(true);
     try {
-      const dataUrl = await prepareImage(file);
-      if (dataUrl.length * 0.75 > MAX_UPLOAD_BYTES) throw new Error('The image is still larger than 3 MB after shrinking. Try a smaller file.');
-      await call('/image', 'POST', { dataUrl }, 'Image uploaded');
+      const dataUrl = await shrinkImage(file);
+      change((x) => (x.envelope.image = dataUrl), 'Image added');
     } catch (e) {
-      toast(e.message, 'error');
+      change(() => {
+        throw e;
+      });
     } finally {
-      setUploading(false);
+      setBusy(false);
     }
   }
 
   return (
     <section className="panel">
-      <div className="kicker">Step 2 · hidden from the public until zero</div>
+      <div className="kicker">Step 2 · shown when the envelope opens</div>
       <h2 className="panel-title mb">Inside the envelope</h2>
       <div className="form-grid one">
         <label className="field">
@@ -326,8 +238,8 @@ function EnvelopeSettings({ p, call, toast }) {
           <textarea rows={3} maxLength={400} value={env.body} onChange={(e) => setEnv({ ...env, body: e.target.value })} />
         </label>
       </div>
-      <button type="button" className="btn btn-primary" disabled={busy} onClick={save}>
-        {busy ? 'Saving…' : 'Save envelope text'}
+      <button type="button" className="btn btn-primary" onClick={() => change((x) => applyEdit(x, { envelope: env }), 'Envelope saved')}>
+        Save envelope text
       </button>
 
       <div className="divider" />
@@ -339,12 +251,12 @@ function EnvelopeSettings({ p, call, toast }) {
         </div>
       )}
       <div className="row wrap">
-        <label className={`btn btn-sm ${uploading ? 'btn-disabled' : ''}`}>
-          {uploading ? 'Uploading…' : p.envelope.image ? 'Replace image' : 'Upload image'}
-          <input type="file" accept="image/png,image/jpeg,image/webp" hidden disabled={uploading} onChange={(e) => (upload(e.target.files[0]), (e.target.value = ''))} />
+        <label className={`btn btn-sm ${busy ? 'btn-disabled' : ''}`}>
+          {busy ? 'Adding…' : p.envelope.image ? 'Replace image' : 'Add image'}
+          <input type="file" accept="image/png,image/jpeg,image/webp" hidden disabled={busy} onChange={(e) => (upload(e.target.files[0]), (e.target.value = ''))} />
         </label>
         {p.envelope.image && (
-          <button type="button" className="btn btn-sm btn-danger-ghost" onClick={() => window.confirm('Remove the envelope image?') && call('/image', 'DELETE', undefined, 'Image removed')}>
+          <button type="button" className="btn btn-sm btn-danger-ghost" onClick={() => window.confirm('Remove the envelope image?') && change((x) => (x.envelope.image = null), 'Image removed')}>
             Remove image
           </button>
         )}
@@ -353,38 +265,28 @@ function EnvelopeSettings({ p, call, toast }) {
   );
 }
 
-// Keeps small images as they are; shrinks big ones to fit the upload limit.
-async function prepareImage(file) {
-  const original = await readAsDataUrl(file);
-  const img = await loadImage(original);
-  const longest = Math.max(img.naturalWidth, img.naturalHeight);
-  if (file.size <= MAX_UPLOAD_BYTES * 0.8 && longest <= MAX_IMAGE_SIDE) return original;
-  const scale = Math.min(1, MAX_IMAGE_SIDE / longest);
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.round(img.naturalWidth * scale);
-  canvas.height = Math.round(img.naturalHeight * scale);
-  canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-  // WebP keeps transparency; JPEG is the fallback for browsers without it.
-  const webp = canvas.toDataURL('image/webp', 0.9);
-  return webp.startsWith('data:image/webp') ? webp : canvas.toDataURL('image/jpeg', 0.9);
-}
-
-function readAsDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(r.result);
-    r.onerror = () => reject(new Error('Could not read that file'));
-    r.readAsDataURL(file);
-  });
-}
-
-function loadImage(src) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error('That file is not a valid image'));
-    img.src = src;
-  });
+// Fits the image within 1920px and compresses it so it can be saved in the
+// browser (which allows only a few MB).
+async function shrinkImage(file) {
+  const src = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = () => reject(new Error('That file is not a valid image'));
+      i.src = src;
+    });
+    const scale = Math.min(1, MAX_IMAGE_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(img.naturalWidth * scale);
+    canvas.height = Math.round(img.naturalHeight * scale);
+    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+    // WebP keeps transparency; JPEG is the fallback for browsers without it.
+    const webp = canvas.toDataURL('image/webp', 0.88);
+    return webp.startsWith('data:image/webp') ? webp : canvas.toDataURL('image/jpeg', 0.88);
+  } finally {
+    URL.revokeObjectURL(src);
+  }
 }
 
 function splitHms(total) {

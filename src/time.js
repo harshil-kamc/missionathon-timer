@@ -1,27 +1,11 @@
 import { useEffect, useState } from 'react';
 
-// Offset between the server clock and this device, so a wrong laptop clock
-// can't show the wrong countdown.
-let offsetMs = 0;
-
-export async function syncClock() {
-  try {
-    const t0 = Date.now();
-    const res = await fetch('/api/time', { cache: 'no-store' });
-    const { serverTime } = await res.json();
-    const rtt = Date.now() - t0;
-    offsetMs = Date.parse(serverTime) + rtt / 2 - Date.now();
-  } catch {
-    /* keep previous offset */
-  }
-}
-
-export const serverNow = () => Date.now() + offsetMs;
-
-export function useServerNow(intervalMs = 1000) {
-  const [t, setT] = useState(serverNow());
+// Uses this computer's clock (no server). Make sure the projector laptop's
+// time is set automatically.
+export function useNow(intervalMs = 1000) {
+  const [t, setT] = useState(Date.now());
   useEffect(() => {
-    const iv = setInterval(() => setT(serverNow()), intervalMs);
+    const iv = setInterval(() => setT(Date.now()), intervalMs);
     return () => clearInterval(iv);
   }, [intervalMs]);
   return t;
@@ -44,7 +28,7 @@ export function fmtDateTime(iso) {
   return new Date(iso).toLocaleString(undefined, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
-// Value for <input type="datetime-local"> in the viewer's timezone.
+// Value for <input type="datetime-local"> in this computer's timezone.
 export function toLocalInput(iso) {
   if (!iso) return '';
   const d = new Date(iso);
@@ -52,10 +36,3 @@ export function toLocalInput(iso) {
 }
 
 export const fromLocalInput = (v) => (v ? new Date(v).toISOString() : null);
-
-// Time left on the timer in ms, using the synced clock.
-export function remainingMs(p, now) {
-  if (p.mode === 'target') return p.targetAt ? Math.max(0, Date.parse(p.targetAt) - now) : null;
-  if (p.status === 'running' && p.endsAt) return Math.max(0, Date.parse(p.endsAt) - now);
-  return (p.remainingSeconds ?? p.durationSeconds ?? 0) * 1000;
-}
