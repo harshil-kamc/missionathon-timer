@@ -60,9 +60,22 @@ test('edits are validated and trimmed', () => {
   assert.equal(p.envelope.body.length, 400);
 });
 
-test('admin password and sign-in tokens', async () => {
-  process.env.CONTROL_PASSWORD = 'test-password-123';
-  const { checkPassword, issueToken, signedIn } = await import('../lib/http.js');
+test('admin password (settings.js) and sign-in tokens', async () => {
+  const fs = await import('node:fs');
+  const os = await import('node:os');
+  const path = await import('node:path');
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'mt-')), 'settings.js');
+  process.env.MISSIONATHON_SETTINGS = file;
+  const { loadSettings } = await import('../lib/config.js');
+  const setPassword = async (pw, n) => {
+    fs.writeFileSync(file, `export default { adminPassword: ${JSON.stringify(pw)} };`);
+    fs.utimesSync(file, new Date(), new Date(Date.now() + n * 1000));
+    await loadSettings();
+  };
+  const { checkPassword, issueToken, signedIn, passwordConfigured } = await import('../lib/http.js');
+  await setPassword('short', 1);
+  assert.equal(passwordConfigured(), false); // under 8 characters is refused
+  await setPassword('test-password-123', 2);
   assert.equal(checkPassword('wrong'), false);
   assert.equal(checkPassword('test-password-123'), true);
   const token = issueToken();
@@ -70,10 +83,9 @@ test('admin password and sign-in tokens', async () => {
   assert.equal(signedIn({ headers: { authorization: `Bearer ${token}x` } }), false);
   assert.equal(signedIn({ headers: {} }), false);
   // Changing the password signs everyone out.
-  process.env.CONTROL_PASSWORD = 'a-different-password';
+  await setPassword('a-different-password', 3);
   assert.equal(signedIn({ headers: { authorization: `Bearer ${token}` } }), false);
 });
-
 test('envelope images are checked by their bytes', async () => {
   const { checkImage } = await import('../lib/image.js');
   const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0]).toString('base64');

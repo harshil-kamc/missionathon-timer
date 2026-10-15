@@ -1,72 +1,96 @@
 # Missionathon Timer – Guide
 
-The projector countdown for Missionathon 2026.
+Projector countdown for Missionathon 2026, with one admin dashboard that controls every screen.
 
-- **Projector screen** (`/`): big countdown, logo and rotating backgrounds. At 00:00:00 an envelope opens and shows the mission message.
-- **Admin control panel** (`/#control`): set and run the timer and write what is inside the envelope.
+- **Projector screen**: `http://SERVER:3000/` – the big countdown with the logo and rotating backgrounds. At 00:00:00 an envelope opens with the mission message. Open it on as many computers as you like.
+- **Admin dashboard**: `http://SERVER:3000/#control` – password protected. Set and run the timer and write what is inside the envelope. Every projector screen follows it within about 2 seconds.
 
-It runs two ways:
+No database, no environment variables, nothing to install except Node.js. The timer is kept in the server's memory and saved to `data/timer.json`, so a restart doesn't lose it.
 
-| | **Online (website)** | **Offline backup (from disk)** |
-|---|---|---|
-| Open | `https://<your-site>.vercel.app` | double-click `dist/index.html` |
-| Who controls | the admin, signed in with the password, from any device | the control panel in the same browser on the same computer |
-| Which screens follow | **every** projector screen opened from the link, anywhere | only windows in that browser |
-| Needs internet | yes | no |
+The projector page shows nothing about the admin side, and the envelope contents are never sent to projector screens before zero. The admin password lives only in `settings.js` on the server and is never sent to browsers.
 
 ---
 
-## 1. Put it online (Vercel)
+## 1. Set up the server (once)
 
-1. Put this folder in a GitHub repo (private is fine). In Vercel: **Add New → Project**, import the repo, click **Deploy** (it detects Vite; keep the defaults).
-2. In the Vercel project: **Storage → Create → Upstash (Redis)** on the free plan (choose a Mumbai region if offered) and **connect it to the project**. This is where the timer is kept so every screen sees the same thing.
-3. **Settings → Environment Variables**: add `CONTROL_PASSWORD` = the admin password (at least 8 characters).
-4. **Deployments → latest → ⋯ → Redeploy**.
-5. Check: `https://<your-site>.vercel.app/api/state` shows text starting with `{"timer":`. If it says "Storage is not connected", step 2 isn't connected to this project yet.
+The "server" is any computer that stays on during the event and that every screen can reach: your own server/VPS, or simply the admin laptop on the venue Wi-Fi.
 
-Without step 2 the projector shows "Waiting for the Missionathon server…"; without step 3 the admin sign-in says no password is set.
+1. Install **Node.js 20 or newer** from https://nodejs.org (LTS). Check in a terminal: `node -v`.
+2. Unzip this folder on the server, e.g. `C:\missionathon-timer` or `/opt/missionathon-timer`.
+3. In the folder, copy **`settings.example.js`** to **`settings.js`** and open it in Notepad (or any editor):
+   ```js
+   export default {
+     adminPassword: 'your-admin-password-here',   // at least 8 characters
+     port: 3000,
+     behindProxy: false,
+   };
+   ```
+   Keep the quotes around the password. Don't share this file.
+4. Start the server from a terminal opened in the folder:
+   ```
+   node server.js
+   ```
+   It prints the addresses:
+   ```
+   Missionathon timer running on port 3000
+     Projector:     http://localhost:3000/
+     Admin control: http://localhost:3000/#control
+   ```
+   Keep this window open: closing it stops the timer site.
+
+Nothing else to install: the site is already built in `dist/`.
+
+### Reaching it from other computers
+- Find the server's address:
+  - Windows: run `ipconfig` and look for **IPv4 Address** (e.g. `192.168.1.20`).
+  - Linux/Mac: `hostname -I` or `ipconfig getifaddr en0`.
+- On other computers on the same network open `http://192.168.1.20:3000/` (projector) and `http://192.168.1.20:3000/#control` (admin).
+- On Windows the first run may ask to allow Node.js through the firewall: click **Allow** (private networks).
+- On a cloud server/VPS, open port 3000 in its firewall, or put it behind nginx/your domain (then set `behindProxy: true`).
+
+### Changing the password
+Edit `adminPassword` in `settings.js`, then stop the server (`Ctrl + C`) and run `node server.js` again. Everyone signed in is signed out.
 
 ---
 
-## 2. Run it at the event (online)
+## 2. Run it at the event
 
-1. On the projector laptop, open `https://<your-site>.vercel.app`, put the window on the projector and press **F11** (full screen). Open the same link on as many other screens as you like.
-2. On the admin's laptop or phone, open `https://<your-site>.vercel.app/#control` and sign in with the admin password.
-3. Every change the admin makes appears on all projector screens within about 2 seconds. All screens use the server's clock, so they hit zero together.
+1. Projector computers: open `http://SERVER:3000/`, put the window on the projector, press **F11** (full screen).
+2. Admin: open `http://SERVER:3000/#control` on any laptop or phone and sign in.
+3. Changes appear on every projector screen within about 2 seconds. All screens use the server's clock, so they hit zero together.
 
-Security: only someone with the password can change the timer. Ten wrong passwords from one device lock it out for 15 minutes. Changing `CONTROL_PASSWORD` in Vercel (and redeploying) signs everyone out. The envelope contents are not sent to projector screens before zero.
+Ten wrong passwords from one device lock it out for 15 minutes.
 
 ---
 
-## 3. Use the control panel
+## 3. Use the admin dashboard
 
 ### Count down for a set time (e.g. 45 minutes)
-1. In **Step 1 · Timer**, choose **Run for a set duration**, enter hours, minutes, seconds.
-2. Optionally change **Headline above the timer** (e.g. "Mission 2 unlocks in") and **Line at the bottom of the screen**.
-3. Click **Save timer**, then **Start** at the top.
-   - **Pause** freezes it (screens show "Timer paused"), **Resume** continues, **Reset** goes back to the full duration.
+1. **Step 1 · Timer** → **Run for a set duration** → enter hours, minutes, seconds.
+2. Optionally change **Headline above the timer** and **Line at the bottom of the screen**.
+3. **Save timer**, then **Start** at the top. **Pause** / **Resume** / **Reset** as needed (screens show "Timer paused" while paused).
 
 ### Count down to a clock time (e.g. 2:00 PM)
-1. Choose **Count down to a time**, pick the date and time, click **Save timer**. It counts straight away.
+**Count down to a time** → pick date and time → **Save timer**. It counts straight away.
 
 ### Inside the envelope
-1. In **Step 2**, fill in **Small label**, **Title** and **Message**, click **Save envelope text**.
-2. Optional image (mission card or poster): **Add image** (PNG, JPEG or WebP; large images are shrunk automatically). **Replace image** / **Remove image** to change it. To show only the image, clear the three text boxes and save.
+1. **Step 2**: fill in **Small label**, **Title**, **Message** → **Save envelope text**.
+2. Optional image (mission card/poster): **Add image** (PNG, JPEG or WebP; large images are shrunk automatically). **Replace image** / **Remove image** to change it. To show only the image, clear the three text boxes and save.
 
 ### Reveal
-- **Preview envelope ↗** shows the opened envelope in a new window without opening it on the projectors.
+- **Preview envelope ↗**: see the opened envelope in a new tab without opening it on the projectors.
 - The envelope opens **by itself at 00:00:00** on every screen.
-- **Open envelope now…** opens it early (asks to confirm).
-- **Back to the timer** closes it. A duration timer goes back to its full time; for a clock time that has passed, set a new time first.
+- **Open envelope now…**: open it early (asks to confirm).
+- **Back to the timer**: close it. A duration timer resets to its full time; for a clock time that has passed, set a new time first.
 
 ### Next round
-Change the time, headline and envelope text, **Save**, then **Start** (duration mode).
+Change the time, headline and envelope text, **Save**, then **Start**.
 
 ---
 
-## 4. Offline backup (no internet)
+## 4. Offline backup (one computer, no server)
 
-If the internet fails, unzip the project and double-click `dist/index.html` (projector), then open the same address with `#control` added in a second window of the **same browser** (e.g. `file:///C:/Users/you/Desktop/timer-2/dist/index.html#control`). No password is needed offline. It uses the computer's clock, so keep Windows' "Set time automatically" on, and don't use an incognito window.
+If the server is unavailable, double-click `dist/index.html` on the projector computer, then open the same address with `#control` added in a second window of the **same browser** (e.g. `file:///C:/missionathon-timer/dist/index.html#control`). This only controls windows in that browser, uses that computer's clock, and has no password.
 
 ---
 
@@ -74,38 +98,32 @@ If the internet fails, unzip the project and double-click `dist/index.html` (pro
 
 | Problem | Fix |
 |---|---|
-| Projector says "Waiting for the Missionathon server…" | Check the internet. On Vercel, check Upstash Redis is connected (section 1, step 2) and redeployed. Or switch to the offline backup. |
-| Admin sign-in says no password is set | Add `CONTROL_PASSWORD` in Vercel and redeploy. |
-| "Too many wrong passwords" | Wait 15 minutes, or sign in from another device. |
-| Offline: projector doesn't follow the panel | Both windows must be in the same browser, not incognito. Press F5 on the projector window. |
+| Projector says "Waiting for the Missionathon server…" | The server isn't reachable: check `node server.js` is still running, the address/port, the Wi-Fi, and the firewall. |
+| Admin sign-in says the password is not set up | Set `adminPassword` (8+ characters) in `settings.js` and restart the server. |
+| "Too many wrong passwords" | Wait 15 minutes or sign in from another device. |
+| Other computers can't open the site | Use the server's IP address (not `localhost`), same network, allow Node.js in the firewall. |
 | Image won't save | Use a smaller image and try again. |
-| "Set the time in the control panel" on screen | "Count down to a time" was chosen without a time. Pick one and save. |
+| Want to reset everything | Stop the server, delete `data/timer.json`, start it again. |
 
-Tip: run a 10-second test before the event so you've seen the reveal.
+Tip: run a 10-second test before the event so you've seen the reveal on every screen.
 
 ---
 
-## 6. Change the design or code (developers)
-
-Needs Node.js 20 or newer.
+## 6. For developers
 
 ```
 npm install
-copy .env.example .env.local     (then set CONTROL_PASSWORD in .env.local)
-npm run dev      http://localhost:5174  and  http://localhost:5174/#control
+npm run dev      live-reloading version on the port in settings.js
 npm test         timer, password and image checks
-npm run build    rebuilds dist/ (one self-contained index.html + projector images)
+npm run build    rebuilds dist/ after changes
+npm start        same as node server.js
 ```
 
-Without Redis, local testing saves the timer to a `.data/` folder.
-
-- `src/Display.jsx`: projector screen (logo, backgrounds list, countdown, envelope)
-- `src/Control.jsx`: admin control panel and sign-in
-- `src/timer.js`: timer rules and default text
-- `src/store.js`: online/offline switch, talking to the server, browser storage
-- `api/`: server routes Vercel runs (`state`, `time`, `login`, `admin`, `image`)
-- `lib/`: storage (Redis), password check, image check
-- `src/styles.css`: colours, fonts and layout
-- `public/projector/`: logo and backgrounds (`bg1.jpg` … `bg10.jpg`, `bg-crew.jpg`, `bg-mask.jpg`, `bg-planning-room.jpg`). Replace files with the same names or edit the list at the top of `src/Display.jsx`, then `npm run build`.
+- `server.js`: the server (site + API)
+- `settings.example.js`: template for `settings.js` (admin password, port)
+- `api/`: API routes (`state`, `time`, `login`, `admin`, `image`)
+- `lib/`: settings, timer storage (memory + `data/timer.json`), password check, image check
+- `src/Display.jsx`: projector screen · `src/Control.jsx`: admin dashboard · `src/timer.js`: timer rules · `src/store.js`: talking to the server
+- `public/projector/`: logo and backgrounds. Replace files with the same names or edit the list in `src/Display.jsx`, then `npm run build`.
 
 The background images are film stills: fine on the event screen, not for promotion.

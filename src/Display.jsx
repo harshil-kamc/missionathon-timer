@@ -34,7 +34,6 @@ export default function Display({ preview }) {
   const left = remainingMs(p, now);
   const envelope = previewEnvelope || (p.revealed ? p.envelope : null);
   const paused = p.mode === 'duration' && p.status === 'paused';
-  const noTime = p.mode === 'target' && !p.targetAt;
 
   return (
     <div className="pt">
@@ -51,7 +50,6 @@ export default function Display({ preview }) {
             {p.headline && <div className="pt-phase">{p.headline}</div>}
             <Timer ms={left} paused={paused} />
             {paused && <div className="pt-alert">Timer paused</div>}
-            {noTime && <div className="pt-alert">Set the time in the control panel</div>}
           </section>
         )}
 
