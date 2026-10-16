@@ -2,54 +2,114 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 
 type CountdownTimerProps = {
-  targetTime: number
+  status: 'not_started' | 'running' | 'paused' | 'completed'
+  targetEndTime: number | null
+  remainingSeconds: number
+  serverTimeOffset: number
+  onZeroReached?: () => void
 }
 
 type TimeParts = {
+  hours: string
   minutes: string
   seconds: string
-  milliseconds: string
-  complete: boolean
+  totalRemaining: number
 }
 
-function getTimeParts(targetTime: number): TimeParts {
-  const remaining = Math.max(0, targetTime - Date.now())
-  const totalSeconds = Math.floor(remaining / 1000)
-  const minutes = Math.floor(totalSeconds / 60)
-  const seconds = totalSeconds % 60
-  const milliseconds = Math.floor(remaining % 1000)
+function computeTimeParts(
+  status: string,
+  targetEndTime: number | null,
+  remainingSeconds: number,
+  serverTimeOffset: number
+): TimeParts {
+  if (status === 'completed') {
+    return { hours: '00', minutes: '00', seconds: '00', totalRemaining: 0 }
+  }
+
+  let total = remainingSeconds
+  if (status === 'running' && targetEndTime) {
+    const currentServerTime = Date.now() + serverTimeOffset
+    total = Math.max(0, Math.floor((targetEndTime - currentServerTime) / 1000))
+  }
+
+  const h = Math.floor(total / 3600)
+  const m = Math.floor((total % 3600) / 60)
+  const s = total % 60
 
   return {
-    minutes: String(minutes).padStart(2, '0'),
-    seconds: String(seconds).padStart(2, '0'),
-    milliseconds: String(milliseconds).padStart(3, '0'),
-    complete: remaining === 0,
+    hours: String(h).padStart(2, '0'),
+    minutes: String(m).padStart(2, '0'),
+    seconds: String(s).padStart(2, '0'),
+    totalRemaining: total,
   }
 }
 
-export default function CountdownTimer({ targetTime }: CountdownTimerProps) {
-  const [time, setTime] = useState(() => getTimeParts(targetTime))
+export default function CountdownTimer({
+  status,
+  targetEndTime,
+  remainingSeconds,
+  serverTimeOffset,
+  onZeroReached,
+}: CountdownTimerProps) {
+  const [time, setTime] = useState(() =>
+    computeTimeParts(status, targetEndTime, remainingSeconds, serverTimeOffset)
+  )
 
   useEffect(() => {
-    const update = () => {
-      setTime(getTimeParts(targetTime))
+    let animationFrameId: number
+    let lastSecond = -1
+
+    const tick = () => {
+      const parts = computeTimeParts(status, targetEndTime, remainingSeconds, serverTimeOffset)
+      
+      if (parts.totalRemaining !== lastSecond) {
+        lastSecond = parts.totalRemaining
+        setTime(parts)
+        if (parts.totalRemaining === 0 && status === 'running' && onZeroReached) {
+          onZeroReached()
+        }
+      }
+
+      if (status === 'running') {
+        animationFrameId = requestAnimationFrame(tick)
+      }
     }
 
-    const interval = window.setInterval(update, 200)
-    return () => window.clearInterval(interval)
-  }, [targetTime])
+    tick()
+
+    return () => {
+      if (animationFrameId) cancelAnimationFrame(animationFrameId)
+    }
+  }, [status, targetEndTime, remainingSeconds, serverTimeOffset, onZeroReached])
+
+  const isComplete = status === 'completed' || time.totalRemaining === 0
 
   return (
     <motion.div
-      className={`countdown${time.complete ? ' countdown--complete' : ''}`}
+      className={`countdown-container${isComplete ? ' countdown-container--complete' : ''}${status === 'paused' ? ' countdown-container--paused' : ''}`}
       role="timer"
-      aria-label={`${time.minutes} minutes, ${time.seconds} seconds, ${time.milliseconds} milliseconds remaining`}
-      initial={{ opacity: 0, y: 14, filter: 'blur(8px)' }}
-      animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-      transition={{ duration: 1.1, ease: [0.2, 0.8, 0.2, 1] }}
+      aria-label={`${time.hours} hours, ${time.minutes} minutes, ${time.seconds} seconds remaining`}
+      initial={false}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
     >
-      <span>{time.minutes}</span><i>:</i><span>{time.seconds}</span><i>:</i>
-      <span className="countdown__milliseconds">{time.milliseconds}</span>
+      {/* Hours Group */}
+      <div className="countdown__digit-group">
+        <span className="countdown__digits">{time.hours}</span>
+        <span className="countdown__label">HR</span>
+      </div>
+
+      {/* Minutes Group */}
+      <div className="countdown__digit-group">
+        <span className="countdown__digits">{time.minutes}</span>
+        <span className="countdown__label">MIN</span>
+      </div>
+
+      {/* Seconds Group */}
+      <div className="countdown__digit-group">
+        <span className="countdown__digits">{time.seconds}</span>
+        <span className="countdown__label">SEC</span>
+      </div>
     </motion.div>
   )
 }

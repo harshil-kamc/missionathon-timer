@@ -1,28 +1,26 @@
 {
-  "name": "missionathon-timer",
-  "version": "1.0.0",
+  "name": "missionathon-live-dashboard",
   "private": true,
-  "description": "Missionathon 2026 projector countdown with an admin control panel (self-hosted, no database)",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js --dev",
+    "dev": "vite",
+    "api": "node --env-file-if-exists=.env server.mjs",
     "build": "vite build",
-    "test": "node --test"
+    "preview": "vite preview",
+    "start": "node --env-file-if-exists=.env server.mjs",
+    "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "@fontsource/anton": "5.1.0",
-    "@fontsource/dm-sans": "5.1.0",
-    "@fontsource/ibm-plex-mono": "5.1.0",
-    "react": "18.3.1",
-    "react-dom": "18.3.1"
+    "framer-motion": "^12.23.12",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "4.3.4",
-    "vite": "5.4.21",
-    "vite-plugin-singlefile": "2.0.3"
-  },
-  "engines": {
-    "node": ">=20"
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.1.9",
+    "@vitejs/plugin-react": "^5.0.2",
+    "typescript": "~5.8.3",
+    "vite": "^7.1.7"
   }
 }

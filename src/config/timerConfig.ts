@@ -1,2 +1,2 @@
-// The dashboard configuration is the single source of truth for all timestamps.
+// Keep the legacy name as an alias to the shared server defaults.
 export { dashboardConfig as timerConfig } from './dashboardConfig'

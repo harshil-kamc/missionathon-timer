@@ -1,0 +1,6 @@
+{
+  "name": "Missionathon — Classified Transmission",
+  "description": "Money Heist themed classified countdown and mission release dashboard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,19 +1,46 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import backgroundImageOne from '../../money-heist-ending.webp'
-import backgroundImageTwo from '../../la casa de papel.jpg'
-import backgroundImageThree from '../../Обои «Бумажный дом» на телефон 🖤❤️ _ La Casa de Papel _ Эстетика сериала.jpg'
 
-const backgroundImages = [backgroundImageOne, backgroundImageTwo, backgroundImageThree]
-const backgroundIntervalMs = 8000
+// Comprehensive Money Heist image library combining local assets & official high-res gallery
+const backgroundImages = [
+  '/la casa de papel.jpg',
+  '/money_heist_crew_1791369136971.jpg',
+  '/money_heist_vault_1791369163774.jpg',
+  '/money_heist_mask_1791369309304.jpg',
+  '/money-heist-ending.webp',
+  '/mission_dossier_1791369365944.jpg',
+  '/mission-image.jpg',
+  'https://static.tvmaze.com/uploads/images/original_untouched/209/523445.jpg',
+  'https://static.tvmaze.com/uploads/images/original_untouched/219/547630.jpg',
+  'https://static.tvmaze.com/uploads/images/original_untouched/284/711600.jpg',
+  'https://static.tvmaze.com/uploads/images/original_untouched/353/884776.jpg',
+  'https://static.tvmaze.com/uploads/images/original_untouched/353/884777.jpg',
+  'https://static.tvmaze.com/uploads/images/original_untouched/442/1105757.jpg',
+  'https://static.tvmaze.com/uploads/images/original_untouched/631/1577982.jpg',
+  'https://static.tvmaze.com/uploads/images/original_untouched/205/514797.jpg',
+  'https://static.tvmaze.com/uploads/images/original_untouched/246/616031.jpg',
+  'https://static.tvmaze.com/uploads/images/original_untouched/270/676261.jpg',
+  'https://static.tvmaze.com/uploads/images/original_untouched/270/676262.jpg',
+  'https://static.tvmaze.com/uploads/images/original_untouched/270/676263.jpg',
+].map((src) => encodeURI(src))
+
+// Consistent 8-second rotation (5 to 10 seconds interval)
+const BACKGROUND_INTERVAL_MS = 8000
 
 export default function Background() {
   const [activeImage, setActiveImage] = useState(0)
 
+  // Preload upcoming background images to ensure silky crossfades
+  useEffect(() => {
+    const nextIdx = (activeImage + 1) % backgroundImages.length
+    const img = new Image()
+    img.src = backgroundImages[nextIdx]
+  }, [activeImage])
+
   useEffect(() => {
     const interval = window.setInterval(() => {
       setActiveImage((currentImage) => (currentImage + 1) % backgroundImages.length)
-    }, backgroundIntervalMs)
+    }, BACKGROUND_INTERVAL_MS)
 
     return () => window.clearInterval(interval)
   }, [])
@@ -28,20 +55,10 @@ export default function Background() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 1.6, ease: 'easeInOut' }}
+          transition={{ duration: 1.2, ease: 'easeInOut' }}
         />
       </AnimatePresence>
-      <div className="background__glow background__glow--left" />
-      <div className="background__glow background__glow--right" />
-      <motion.div
-        className="background__signal"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: [0, 0.14, 0] }}
-        transition={{ duration: 8, repeat: Infinity, repeatDelay: 9, ease: 'easeInOut' }}
-      />
-      <div className="background__grain" />
-      <div className="background__scanlines" />
-      <div className="background__vignette" />
+      <div className="background__subtle-tint" />
     </div>
   )
 }
