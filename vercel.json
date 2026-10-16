@@ -1,18 +1,13 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": "vite",
-  "headers": [
+  "version": 2,
+  "rewrites": [
     {
-      "source": "/(.*)",
-      "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "Referrer-Policy", "value": "no-referrer" },
-        { "key": "X-Frame-Options", "value": "DENY" }
-      ]
+      "source": "/api/(.*)",
+      "destination": "/api/index.js"
     },
     {
-      "source": "/projector/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }]
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
