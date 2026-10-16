@@ -8,7 +8,7 @@ const WINDOW_SECONDS = 15 * 60;
 
 export default route(async (req, res) => {
   if (req.method !== 'POST') return send(res, 405, { error: 'Method not allowed' });
-  if (!passwordConfigured()) return send(res, 503, { error: 'The admin password is not set up yet.' });
+  if (!passwordConfigured()) return send(res, 503, { error: 'No control password is set. Add CONTROL_PASSWORD (8+ characters) in Vercel → Settings → Environment Variables, then redeploy.' });
   const ip = clientIp(req);
   if ((await failures(ip)) >= MAX_FAILS) return send(res, 429, { error: 'Too many wrong passwords. Try again in 15 minutes.' });
   const { password } = await readBody(req, 10_000);
