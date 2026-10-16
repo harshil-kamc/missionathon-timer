@@ -309,26 +309,6 @@ export default function AdminSidebar({
           </div>
 
           <div className="heist-sidebar__header-actions">
-            <button
-              type="button"
-              className="heist-sidebar__window-link"
-              onClick={() => {
-                const url = window.location.origin + '/admin'
-                window.open(url, 'MissionathonAdminWindow', 'width=1100,height=800,resizable=yes,scrollbars=yes')
-              }}
-              title="Open Authorization & Customization in Separate Popout Window"
-            >
-              &#x29C9; POP OUT
-            </button>
-            <a
-              href="/admin"
-              className="heist-sidebar__window-link"
-              target="_blank"
-              rel="noopener noreferrer"
-              title="Open /admin URL directory in new tab"
-            >
-              &#x2197; /ADMIN
-            </a>
             {isAdmin && (
               <button
                 type="button"

@@ -1,295 +1,1465 @@
-/* Missionathon timer: same palette and type as the Missionathon dashboard. */
 :root {
-  --bg: #030202;
-  --bg-2: #0a0606;
-  --panel: #0e0a09;
-  --panel-2: #130e0d;
-  --line: #221e1a;
-  --line-2: #403a32;
-  --text: #f6f1e9;
-  --text-2: #cfc8bd;
-  --muted: #958e85;
-  --red: #e43c3b;
-  --red-2: #f66e60;
-  --red-dim: rgba(228, 60, 59, 0.14);
-  --gold: #c9a468;
-  --gold-dim: rgba(201, 164, 104, 0.14);
-  --green: #3fb37f;
-  --green-dim: rgba(63, 179, 127, 0.14);
-  --amber: #e2a336;
-  --amber-dim: rgba(226, 163, 54, 0.14);
-  --orange: #f07a2f;
-  --orange-dim: rgba(240, 122, 47, 0.14);
-  --blue: #6b95f0;
-  --blue-dim: rgba(107, 149, 240, 0.14);
-  --display: Anton, 'Barlow Condensed', Impact, sans-serif;
-  --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-  --sans: 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --radius: 0;
-  --side-w: 248px;
-  color-scheme: dark;
-}
-
-* { box-sizing: border-box; }
-html, body, #root { height: 100%; }
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font: 14px/1.5 var(--sans);
+  font-family: 'Manrope', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #f5efe6;
+  background: #060608;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-}
-body::before {
-  /* blueprint grid + red glow */
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  background:
-    radial-gradient(900px 500px at 0% 0%, rgba(228, 60, 59, 0.10), transparent 60%),
-    radial-gradient(700px 500px at 100% 100%, rgba(201, 164, 104, 0.05), transparent 60%),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.7' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
-    linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px) 0 0 / 40px 40px,
-    linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px) 0 0 / 40px 40px;
-}
-#root { position: relative; z-index: 1; }
-a { color: inherit; }
-::selection { background: var(--red); color: #fff; }
-
-h1, h2, h3 { margin: 0; font-weight: 600; }
-p { margin: 0 0 8px; }
-.muted { color: var(--muted); }
-.small { font-size: 12px; }
-.strong { font-weight: 600; text-decoration: none; }
-.mono, code.mono { font-family: var(--mono); font-size: 12px; }
-code.mono { background: var(--panel-2); border: 1px solid var(--line); padding: 1px 6px; border-radius: 0; color: var(--text-2); }
-.nowrap { white-space: nowrap; }
-.ok-text { color: var(--green); font-family: var(--mono); }
-.bad-text { color: var(--red-2); font-family: var(--mono); }
-
-.kicker {
-  font: 500 11px/1.2 var(--mono);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--muted);
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* ---------- Form controls ---------- */
-input, select, textarea {
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
   width: 100%;
-  background: var(--bg-2);
-  border: 1px solid var(--line-2);
-  color: var(--text);
-  border-radius: var(--radius);
-  padding: 9px 11px;
-  font: inherit;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  min-width: 320px;
+  min-height: 100%;
+  height: 100%;
 }
-textarea { resize: vertical; }
-input:focus, select:focus, textarea:focus { outline: none; border-color: var(--red); box-shadow: 0 0 0 3px var(--red-dim); }
-input:disabled, select:disabled, textarea:disabled { opacity: 0.55; cursor: not-allowed; }
-input[type='checkbox'] { width: auto; accent-color: var(--red); }
-select { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 15px) 55%, calc(100% - 10px) 55%; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 28px; }
 
-.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.field-label { font: 500 11px/1.2 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-2); }
-.field-label em { color: var(--red); font-style: normal; }
-.field-hint { font-size: 12px; color: var(--muted); }
-.field-msg { font-size: 12px; color: var(--red-2); }
-
-.btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  border: 1px solid var(--line-2); background: var(--panel-2); color: var(--text);
-  padding: 9px 16px; border-radius: var(--radius);
-  font: 600 12px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase;
-  cursor: pointer; transition: background 0.15s, border-color 0.15s, transform 0.05s; white-space: nowrap;
-}
-.btn:hover:not(:disabled) { border-color: var(--muted); background: #1a1514; }
-.btn:active:not(:disabled) { transform: translateY(1px); }
-.btn:disabled { opacity: 0.45; cursor: not-allowed; }
-.btn-primary { background: var(--red); border-color: var(--red); color: #fff; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04) inset, 0 6px 20px -8px rgba(228, 60, 59, 0.7); }
-.btn-primary:hover:not(:disabled) { background: var(--red-2); border-color: var(--red-2); }
-.btn-ghost { background: transparent; }
-.btn-danger-ghost { background: transparent; color: var(--red-2); border-color: rgba(228, 60, 59, 0.35); }
-.btn-danger-ghost:hover:not(:disabled) { background: var(--red-dim); border-color: var(--red); }
-.btn-sm { padding: 6px 10px; font-size: 11px; }
-.btn-block { width: 100%; padding: 13px; }
-
-a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--red-2); outline-offset: 2px; }
-
-.stack-lg { display: flex; flex-direction: column; gap: 20px; }
-
-.mt { margin-top: 18px; }
-.row { display: flex; align-items: center; gap: 8px; }
-.row.wrap { flex-wrap: wrap; }
-
-.divider { height: 1px; background: var(--line); margin: 16px 0; }
-.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; margin-bottom: 14px; }
-.form-grid.one { grid-template-columns: 1fr; }
-.form-grid .field:has(textarea) { grid-column: span 2; }
-.form-grid.one .field:has(textarea) { grid-column: auto; }
-
-.panel { position: relative; background: linear-gradient(180deg, var(--panel), #0a0606); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; min-width: 0; }
-
-.panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
-.panel-title { font: 400 26px/1 var(--display); letter-spacing: 0.04em; margin-top: 4px; }
-.panel-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-
-.badge { display: inline-flex; align-items: center; gap: 4px; font: 500 10.5px/1 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; padding: 4px 7px; border-radius: 0; border: 1px solid; white-space: nowrap; margin-right: 4px; }
-.badge:last-child { margin-right: 0; }
-.badge-green { color: var(--green); border-color: rgba(63, 179, 127, 0.35); background: var(--green-dim); }
-.badge-amber { color: var(--amber); border-color: rgba(226, 163, 54, 0.35); background: var(--amber-dim); }
-.badge-red { color: var(--red-2); border-color: rgba(228, 60, 59, 0.4); background: var(--red-dim); }
-.badge-orange { color: var(--orange); border-color: rgba(240, 122, 47, 0.4); background: var(--orange-dim); }
-.badge-blue { color: var(--blue); border-color: rgba(107, 149, 240, 0.35); background: var(--blue-dim); }
-.badge-muted { color: var(--muted); border-color: var(--line-2); background: transparent; }
-
-.note { border: 1px solid var(--line-2); border-left: 3px solid var(--blue); background: var(--panel-2); padding: 10px 14px; border-radius: var(--radius); font-size: 13px; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.note-red { border-left-color: var(--red); background: var(--red-dim); }
-.note-amber { border-left-color: var(--amber); background: var(--amber-dim); }
-
-.toasts { position: fixed; right: 20px; bottom: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 100; max-width: calc(100vw - 40px); }
-.toast { background: #1a1514; border: 1px solid var(--line-2); border-left: 3px solid var(--green); padding: 12px 16px; border-radius: var(--radius); font-size: 13px; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5); display: flex; align-items: center; gap: 10px; animation: slidein 0.2s ease-out; }
-.toast-error { border-left-color: var(--red); }
-
-@keyframes slidein { from { transform: translateY(8px); opacity: 0; } }
-
-/* Admin: projector control */
-.proj-live { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-bottom: 10px; }
-.proj-clock { font: 400 clamp(44px, 6vw, 72px)/1 var(--display); letter-spacing: 0.03em; font-variant-numeric: tabular-nums; }
-.proj-clock.is-open { color: var(--red-2); }
-.segmented { display: inline-flex; border: 1px solid var(--line-2); margin-bottom: 18px; flex-wrap: wrap; }
-.segmented button { background: transparent; border: 0; color: var(--muted); padding: 9px 14px; font: 500 12px var(--mono); letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; }
-.segmented button.on { background: var(--panel-2); color: var(--text); box-shadow: inset 0 -2px 0 var(--red); }
-.hms { display: grid; grid-template-columns: repeat(3, 84px); gap: 8px; }
-.hms input { text-align: center; font-family: var(--mono); }
-.proj-image-preview { margin: 10px 0 12px; border: 1px solid var(--line-2); background: #040202; padding: 6px; max-width: 420px; }
-.proj-image-preview img { display: block; max-width: 100%; max-height: 260px; object-fit: contain; margin: 0 auto; }
-label.btn { position: relative; }
-.btn-disabled { opacity: 0.45; pointer-events: none; }
-
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition: none !important; }
+body {
+  min-height: 100vh;
+  min-height: 100svh;
+  overflow-x: hidden;
+  background-color: #050507;
 }
 
 /* ==========================================================================
-   Projector screen (/countdown): cinematic heist layout
-   Based on the Missionathon live-timer design, recoloured to this palette.
-   Base styles are the final state; animations play into them, so reduced
-   motion still shows the finished envelope.
+   1. CINEMATIC STAGE & MONEY HEIST ATMOSPHERE
    ========================================================================== */
-.pt { position: relative; min-height: 100vh; min-height: 100svh; overflow: hidden; background: var(--bg); color: var(--text); }
-.pt-bg { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
-.pt-bg-image { position: absolute; inset: 0; background-position: center; background-size: cover; background-repeat: no-repeat; filter: brightness(0.62) saturate(1.05) contrast(1.04); transform: scale(1.01); opacity: 0; transition: opacity 1.2s ease-in-out; }
-.pt-bg-image.on { opacity: 1; }
-.pt-bg-tint { position: absolute; inset: 0; background:
-  radial-gradient(ellipse at 50% 42%, rgba(228, 60, 59, 0.14) 0%, transparent 62%),
-  linear-gradient(180deg, rgba(3, 2, 2, 0.55) 0%, rgba(3, 2, 2, 0.25) 45%, rgba(3, 2, 2, 0.75) 100%); }
-.pt-loading { position: relative; z-index: 2; min-height: 100vh; display: grid; place-items: center; color: var(--red-2); font: 500 13px var(--mono); letter-spacing: 0.25em; text-transform: uppercase; }
 
-.pt-stage { position: relative; z-index: 2; min-height: 100vh; min-height: 100svh; display: flex; flex-direction: column; align-items: center; padding: 0 20px; }
-.pt-brand { padding: clamp(14px, 2.4vh, 28px) 0 clamp(4px, 1vh, 10px); transition: opacity 0.6s ease; }
-.pt-brand img { display: block; width: min(720px, 86vw); height: auto; max-height: clamp(80px, 22vh, 240px); object-fit: contain; filter: drop-shadow(0 4px 18px rgba(0, 0, 0, 0.95)); }
-.pt-brand-dim { opacity: 0.15; }
-
-/* Countdown: no boxes, labels at the lower right of each number */
-.pt-countdown-stage { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(14px, 3vh, 34px); padding: clamp(20px, 5vh, 70px) 0; text-align: center; animation: pt-rise 0.8s cubic-bezier(0.16, 1, 0.3, 1) both; }
-.pt-phase { font: 600 clamp(12px, 1.5vw, 20px) var(--mono); letter-spacing: 0.32em; text-transform: uppercase; color: var(--red-2); text-shadow: 0 2px 10px rgba(0, 0, 0, 0.95); }
-.pt-timer { display: inline-flex; align-items: flex-end; justify-content: center; gap: clamp(18px, 4.5vw, 64px); white-space: nowrap; user-select: none; }
-.pt-group { position: relative; display: inline-flex; align-items: flex-end; gap: clamp(4px, 0.6vw, 10px); }
-.pt-digits { font: 400 clamp(58px, 13vw, 190px)/0.82 var(--display); letter-spacing: 0.03em; color: #fff; font-variant-numeric: tabular-nums; text-shadow: 0 4px 28px rgba(0, 0, 0, 0.95), 0 0 50px rgba(228, 60, 59, 0.45); }
-.pt-label { padding-bottom: clamp(2px, 0.8vw, 10px); font: 600 clamp(11px, 1.6vw, 20px)/1 var(--mono); letter-spacing: 0.2em; color: var(--red); text-shadow: 0 2px 10px rgba(0, 0, 0, 0.95); }
-.pt-timer-complete .pt-digits { color: var(--red); text-shadow: 0 4px 24px rgba(0, 0, 0, 0.95), 0 0 50px rgba(228, 60, 59, 0.65); }
-.pt-timer-complete .pt-label { color: #fff; }
-.pt-alert { padding: 8px 18px; border: 1px solid rgba(228, 60, 59, 0.6); background: rgba(10, 6, 6, 0.78); color: #fff; font: 600 clamp(13px, 1.6vw, 22px) var(--mono); letter-spacing: 0.16em; text-transform: uppercase; animation: pt-pulse 2.5s ease-in-out infinite; }
-
-.pt-foot { width: 100%; max-width: 1400px; display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 0 0 clamp(14px, 2.4vh, 26px); font: 500 clamp(11px, 1.1vw, 15px) var(--mono); letter-spacing: 0.16em; color: rgba(246, 241, 233, 0.6); text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9); }
-.pt-clock { display: inline-flex; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; }
-.pt-clock i { width: 7px; height: 7px; border-radius: 50%; background: var(--red); box-shadow: 0 0 10px var(--red); }
-.pt-tagline { text-transform: uppercase; text-align: right; }
-
-/* Sealed envelope that opens when a mission unlocks */
-.pt-envelope-stage { flex: 1; display: flex; align-items: center; justify-content: center; width: 100%; padding-top: clamp(150px, 26vh, 300px); animation: pt-rise 0.85s cubic-bezier(0.16, 1, 0.3, 1) both; }
-.pt-envelope { position: relative; width: min(92vw, 560px); height: clamp(250px, 33vh, 340px); perspective: 1400px; transform-style: preserve-3d; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.95), 0 0 45px rgba(228, 60, 59, 0.25); }
-.pt-env-back { position: absolute; inset: 0; z-index: 1; background: radial-gradient(ellipse at 50% 30%, rgba(228, 60, 59, 0.3) 0%, transparent 65%), linear-gradient(150deg, #22100f 0%, #140a09 60%, #0a0606 100%); border: 1px solid rgba(228, 60, 59, 0.4); }
-.pt-env-pattern { position: absolute; inset: 0; opacity: 0.15; background-image: repeating-linear-gradient(45deg, rgba(228, 60, 59, 0.2) 0, rgba(228, 60, 59, 0.2) 1px, transparent 0, transparent 16px); }
-.pt-env-pocket { position: absolute; inset: 0; z-index: 6; pointer-events: none; clip-path: polygon(0 100%, 0 0, 50% 54%, 100% 0, 100% 100%); background: linear-gradient(150deg, rgba(228, 60, 59, 0.1) 0%, transparent 40%), linear-gradient(35deg, #170b0a 0%, #26100f 50%, #150a09 100%); border: 1px solid rgba(228, 60, 59, 0.45); }
-.pt-env-pocket-left, .pt-env-pocket-right { position: absolute; bottom: 0; width: 50%; height: 100%; }
-.pt-env-pocket-left { left: 0; background: linear-gradient(35deg, transparent 49.5%, rgba(0, 0, 0, 0.8) 50%, rgba(228, 60, 59, 0.4) 50.5%, transparent 51%); }
-.pt-env-pocket-right { right: 0; background: linear-gradient(-35deg, transparent 49.5%, rgba(0, 0, 0, 0.8) 50%, rgba(228, 60, 59, 0.4) 50.5%, transparent 51%); }
-.pt-env-pocket-base { position: absolute; left: 0; bottom: 0; width: 100%; height: 3px; background: rgba(228, 60, 59, 0.45); }
-.pt-env-flap { position: absolute; top: 0; left: 0; width: 100%; height: 56%; z-index: 2; transform-origin: top center; transform-style: preserve-3d; transform: rotateX(-180deg); pointer-events: none; animation: pt-flap 0.75s cubic-bezier(0.25, 1, 0.5, 1) 0.25s both; }
-.pt-env-flap-body, .pt-env-flap-inner { position: absolute; inset: 0; clip-path: polygon(0 0, 100% 0, 50% 100%); }
-.pt-env-flap-body { background: linear-gradient(150deg, rgba(228, 60, 59, 0.18) 0%, transparent 50%), linear-gradient(160deg, #2e1312 0%, #1f0d0c 50%, #110807 100%); border-top: 1px solid rgba(246, 110, 96, 0.4); }
-.pt-env-flap-inner { background: radial-gradient(circle at 50% 30%, rgba(228, 60, 59, 0.2), transparent 70%); }
-
-.pt-card { position: absolute; top: 0; left: 6%; width: 88%; height: 94%; z-index: 45; transform: translateY(-68%) scale(1.48); animation: pt-card 2.6s cubic-bezier(0.16, 1, 0.3, 1) 0.4s both; }
-.pt-card-frame { position: relative; width: 100%; height: 100%; overflow: hidden; background: #0a0606; border: 1.5px solid var(--red); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.95), 0 0 25px rgba(228, 60, 59, 0.35), inset 0 0 16px rgba(0, 0, 0, 0.9); }
-.pt-card-media { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0.32; filter: saturate(0.8); }
-.pt-card-content { position: relative; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 8px; padding: 18px 24px; background: linear-gradient(90deg, rgba(10, 6, 6, 0.92) 0%, rgba(10, 6, 6, 0.6) 100%); }
-.pt-card-stamp { position: absolute; top: 14px; right: 16px; padding: 4px 10px 3px; border: 2px solid var(--red); color: var(--red-2); font: 400 15px/1 var(--display); letter-spacing: 0.2em; text-transform: uppercase; transform: rotate(-6deg); }
-.pt-card-kicker { font: 600 12px var(--mono); letter-spacing: 0.24em; text-transform: uppercase; color: var(--red-2); }
-.pt-card-title { font: 400 clamp(26px, 3.4vw, 42px)/1 var(--display); letter-spacing: 0.03em; color: #fff; text-shadow: 0 2px 14px rgba(0, 0, 0, 0.9); }
-.pt-card-body { margin: 0; font: 400 13px/1.45 var(--mono); color: var(--text-2); max-width: 46ch; }
-/* Uploaded mission image: shown whole (never cropped), text in a strip below */
-.pt-card-has-image .pt-card-frame { display: flex; flex-direction: column; }
-.pt-card-image { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; background: #040202; padding: 6px; }
-.pt-card-image img { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
-.pt-card-has-image .pt-card-content { height: auto; flex: none; gap: 2px; padding: 8px 14px; background: #140a09; border-top: 1px solid rgba(228, 60, 59, 0.4); }
-.pt-card-has-image .pt-card-title { font-size: clamp(16px, 1.8vw, 22px); }
-.pt-card-has-image .pt-card-kicker { font-size: 10px; }
-.pt-card-has-image .pt-card-body { font-size: 11px; }
-.pt-timer-paused { opacity: 0.6; }
-
-@keyframes pt-rise { from { opacity: 0; transform: translateY(24px) scale(0.97); } to { opacity: 1; transform: none; } }
-@keyframes pt-pulse { 0%, 100% { border-color: rgba(228, 60, 59, 0.4); box-shadow: none; } 50% { border-color: rgba(228, 60, 59, 0.95); box-shadow: 0 0 14px rgba(228, 60, 59, 0.5); } }
-@keyframes pt-flap { from { transform: rotateX(0deg); z-index: 14; } 40% { z-index: 14; } to { transform: rotateX(-180deg); z-index: 2; } }
-/* The card rises inside the envelope, then comes in front of it as it zooms. */
-@keyframes pt-card {
-  0% { transform: translateY(20%) scale(0.92); opacity: 0; z-index: 4; }
-  25% { transform: translateY(5%) scale(0.96); opacity: 0.9; z-index: 4; }
-  54% { z-index: 4; }
-  55% { transform: translateY(-42%) scale(1.08); opacity: 1; z-index: 45; }
-  100% { transform: translateY(-68%) scale(1.48); opacity: 1; z-index: 45; }
+.heist-app-wrapper {
+  position: relative;
+  width: 100vw;
+  min-height: 100vh;
+  min-height: 100svh;
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+  background-color: #080305;
 }
-@media (max-width: 860px) {
-  .pt-countdown-stage { width: 100%; }
-  .pt-timer { gap: clamp(8px, 2.6vw, 24px); }
-  .pt-digits { font-size: clamp(40px, 12.5vw, 110px); }
-  .pt-label { font-size: clamp(8px, 2.2vw, 14px); letter-spacing: 0.12em; }
-  .pt-group { gap: 3px; }
-  .pt-foot { flex-direction: column; gap: 6px; }
-  .pt-tagline { text-align: center; }
-  .pt-envelope-stage { padding-top: clamp(120px, 22vh, 220px); }
-  .pt-card { transform: translateY(-60%) scale(1.2); }
-  @keyframes pt-card {
-    0% { transform: translateY(20%) scale(0.92); opacity: 0; z-index: 4; }
-    54% { z-index: 4; }
-    55% { transform: translateY(-40%) scale(1.04); opacity: 1; z-index: 45; }
-    100% { transform: translateY(-60%) scale(1.2); opacity: 1; z-index: 45; }
+
+.dashboard-cinematic-stage {
+  position: relative;
+  isolation: isolate;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  min-height: 100vh;
+  min-height: 100svh;
+  height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: transparent;
+  transition: padding 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.background {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.background__image {
+  position: absolute;
+  inset: 0;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  filter: brightness(0.86) saturate(1.1) contrast(1.04);
+  transform: scale(1.01);
+}
+
+.background__subtle-tint {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(180, 20, 30, 0.12) 0%, transparent 65%),
+    linear-gradient(180deg, rgba(8, 3, 5, 0.22) 0%, rgba(8, 3, 5, 0.06) 45%, rgba(8, 3, 5, 0.38) 100%);
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   2. BRAND HEADER
+   ========================================================================== */
+
+.heist-brand-header {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: clamp(12px, 2.2vh, 24px) 20px clamp(4px, 1vh, 10px);
+  width: 100%;
+}
+
+.heist-brand-logo {
+  display: block;
+  width: auto;
+  max-width: min(340px, 80vw);
+  max-height: clamp(42px, 6.5vh, 68px);
+  object-fit: contain;
+  filter: drop-shadow(0 4px 18px rgba(0, 0, 0, 0.95));
+}
+
+.heist-loading-text {
+  margin: auto;
+  color: #e31b23;
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+}
+
+/* ==========================================================================
+   3. PUBLIC COMPOSITION: TIMER & ENVELOPE
+   (NO BOXES, NO GENERIC CARDS, PURE THEATRICAL COMPOSITION)
+   ========================================================================== */
+
+.heist-public-composition {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  width: 100%;
+  max-width: 1200px;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: clamp(8px, 1.5vh, 16px) 20px clamp(40px, 6vh, 60px);
+  gap: clamp(12px, 2vh, 26px);
+}
+
+/* ==========================================================================
+   4. BOLD MONEY HEIST COUNTDOWN TIMER
+   (NO BOX! LABELS AT LOWER-RIGHT OF NUMBERS)
+   ========================================================================== */
+
+.heist-countdown-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin: auto 0;
+  padding: clamp(20px, 6vh, 80px) 0;
+}
+
+.heist-envelope-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin: auto 0;
+  position: relative;
+  z-index: 20;
+}
+
+.heist-brand-header--dimmed {
+  opacity: 0.15;
+  transition: opacity 0.6s ease;
+  pointer-events: none;
+}
+
+.countdown-container {
+  display: inline-flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: clamp(24px, 5.5vw, 72px);
+  padding: clamp(6px, 1.5vh, 20px) 0;
+  user-select: none;
+  white-space: nowrap;
+}
+
+/* Individual Digit + Lower-Right Label Group */
+.countdown__digit-group {
+  position: relative;
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: flex-start;
+  padding-right: clamp(26px, 4.2vw, 54px); /* Space reserved for lower-right label */
+}
+
+/* THE BOLD MONEY HEIST DIGITS */
+.countdown__digits {
+  font-family: 'Anton', 'Bebas Neue', 'Teko', 'Oswald', Impact, sans-serif;
+  font-size: clamp(58px, 14vw, 172px);
+  font-weight: 900;
+  line-height: 0.82;
+  letter-spacing: 0.04em;
+  color: #ffffff;
+  font-variant-numeric: tabular-nums;
+  text-shadow:
+    0 4px 28px rgba(0, 0, 0, 0.95),
+    0 0 50px rgba(227, 27, 35, 0.45);
+  transform: translateZ(0);
+}
+
+/* LABELS POSITIONED AT LOWER-RIGHT (NO BOXES!) */
+.countdown__label {
+  position: absolute;
+  right: 0;
+  bottom: clamp(2px, 0.8vw, 10px);
+  font-family: 'Oswald', sans-serif;
+  font-size: clamp(12px, 1.8vw, 20px);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  line-height: 1;
+  color: #e31b23; /* Deep Money Heist red */
+  text-transform: uppercase;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.95);
+}
+
+.countdown-container--complete .countdown__digits {
+  color: #e31b23;
+  text-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.95),
+    0 0 50px rgba(227, 27, 35, 0.65);
+}
+
+.countdown-container--complete .countdown__label {
+  color: #ffffff;
+}
+
+.countdown-container--paused {
+  opacity: 0.75;
+}
+
+/* ==========================================================================
+   5. LARGE 3D PHYSICAL SEALED ENVELOPE
+   (REALISTIC LAYERING, TEXTURE & CINEMATIC DEPTH)
+   ========================================================================== */
+
+.envelope-cinema-viewport {
+  width: min(92vw, 560px);
+  margin-top: clamp(20px, 3.5vh, 40px);
+  perspective: 1400px;
+  display: flex;
+  justify-content: center;
+  position: relative;
+}
+
+.envelope-heist-structure {
+  position: relative;
+  width: 100%;
+  height: clamp(270px, 33vh, 340px);
+  transform-style: preserve-3d;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.95),
+    0 0 45px rgba(180, 10, 20, 0.25);
+}
+
+/* Back panel interior */
+.envelope-heist__back {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(160, 15, 25, 0.35) 0%, transparent 65%),
+    linear-gradient(150deg, #220e11 0%, #15090b 60%, #0c0507 100%);
+  border: 1px solid rgba(227, 27, 35, 0.4);
+  z-index: 1;
+}
+
+.envelope-heist__interior-pattern {
+  position: absolute;
+  inset: 0;
+  opacity: 0.15;
+  background-image: repeating-linear-gradient(45deg, rgba(227, 27, 35, 0.2) 0, rgba(227, 27, 35, 0.2) 1px, transparent 0, transparent 16px);
+}
+
+/* Front triangular pocket holding the card */
+.envelope-heist__pocket {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(150deg, rgba(227, 27, 35, 0.1) 0%, transparent 40%),
+    linear-gradient(35deg, #18090b 0%, #280e12 50%, #16080a 100%);
+  border: 1px solid rgba(227, 27, 35, 0.45);
+  clip-path: polygon(0 100%, 0 0, 50% 54%, 100% 0, 100% 100%);
+  z-index: 6;
+  pointer-events: none;
+}
+
+.envelope-heist__pocket-left {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(35deg, transparent 49.5%, rgba(0, 0, 0, 0.8) 50%, rgba(227, 27, 35, 0.4) 50.5%, transparent 51%);
+}
+
+.envelope-heist__pocket-right {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(-35deg, transparent 49.5%, rgba(0, 0, 0, 0.8) 50%, rgba(227, 27, 35, 0.4) 50.5%, transparent 51%);
+}
+
+.envelope-heist__pocket-base {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 3px;
+  background: rgba(227, 27, 35, 0.45);
+}
+
+/* Envelope Clickable & Reopen States */
+.envelope-heist-structure--clickable {
+  cursor: pointer;
+}
+
+.envelope-heist__reopen-hint {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 12px;
+  background: rgba(14, 5, 7, 0.85);
+  border: 1px solid rgba(227, 27, 35, 0.5);
+  border-radius: 2px;
+  color: #ffffff;
+  font-family: 'Oswald', sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  pointer-events: none;
+  animation: heist-pulse-glow 2.5s infinite ease-in-out;
+}
+
+@keyframes heist-pulse-glow {
+  0%, 100% { opacity: 0.65; border-color: rgba(227, 27, 35, 0.4); }
+  50% { opacity: 1; border-color: rgba(227, 27, 35, 0.9); box-shadow: 0 0 12px rgba(227, 27, 35, 0.5); }
+}
+
+/* Top 3D Fold Flap */
+.envelope-heist__flap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 56%;
+  transform-origin: top center;
+  transform-style: preserve-3d;
+  pointer-events: none;
+  z-index: 18;
+}
+
+.envelope-heist__flap-body {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  background:
+    linear-gradient(150deg, rgba(227, 27, 35, 0.18) 0%, transparent 50%),
+    linear-gradient(160deg, #301115 0%, #200c0f 50%, #120709 100%);
+  border-top: 1px solid rgba(255, 120, 130, 0.4);
+}
+
+.envelope-heist__flap-inner {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  background: radial-gradient(circle at 50% 30%, rgba(227, 27, 35, 0.2), transparent 70%);
+}
+
+/* ==========================================================================
+   6. CINEMATIC MISSION DOSSIER CARD
+   (SMOOTH GLIDE, UNCLIPPED IMAGE, SELF-CONTAINED PRESENTATION)
+   ========================================================================== */
+
+.heist-dossier-card {
+  position: absolute;
+  top: 0;
+  left: 6%;
+  width: 88%;
+  height: 94%;
+  z-index: 15;
+  outline: none;
+  transform-style: preserve-3d;
+}
+
+.heist-dossier-card__border-frame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #0d0507;
+  border: 1.5px solid #e31b23;
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.95),
+    0 0 25px rgba(227, 27, 35, 0.35),
+    inset 0 0 16px rgba(0, 0, 0, 0.9);
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+/* Subtle, slightly visible small close button to re-envelope */
+.heist-dossier-card__close-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 25;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #140608;
+  border: 1px solid rgba(227, 27, 35, 0.65);
+  border-radius: 2px;
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.heist-dossier-card__close-btn:hover {
+  background: #e31b23;
+  border-color: #ff3b44;
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(227, 27, 35, 0.8);
+  transform: scale(1.08);
+}
+
+.heist-dossier-card--dominant {
+  z-index: 45;
+}
+
+.envelope-cinema-viewport--zoomed {
+  z-index: 30;
+}
+
+.heist-dossier-card__media {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #040203;
+  padding: 10px;
+  overflow: hidden;
+}
+
+/* MANDATORY: NO CROPPING! OBJECT-FIT: CONTAIN GUARANTEED */
+.heist-dossier-card__img {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.heist-dossier-card__content {
+  padding: 10px 14px;
+  background: #140608;
+  border-top: 1px solid rgba(227, 27, 35, 0.4);
+}
+
+.heist-dossier-card__title {
+  font-family: 'Compacta BT', 'Bebas Neue', 'Anton', 'Oswald', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+}
+
+.heist-dossier-card__body {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: #e0d5ce;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ==========================================================================
+   7. CINEMATIC FULLSCREEN DOSSIER MODAL
+   (COMPLETE UNCLIPPED IMAGE PRESENTATION)
+   ========================================================================== */
+
+.cinema-fullscreen-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(3, 2, 3, 0.94);
+  padding: clamp(12px, 3vh, 32px);
+  cursor: pointer;
+}
+
+.cinema-fullscreen-panel {
+  position: relative;
+  width: min(96vw, 1000px);
+  max-height: min(94vh, 900px);
+  display: flex;
+  flex-direction: column;
+  background: #0c0507;
+  border: 2px solid #e31b23;
+  overflow: hidden;
+  cursor: default;
+}
+
+.cinema-fullscreen-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  background: #17070a;
+  border-bottom: 1px solid rgba(227, 27, 35, 0.5);
+}
+
+.cinema-fullscreen-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cinema-fullscreen-badge {
+  font-family: 'Oswald', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: #e31b23;
+}
+
+.cinema-fullscreen-title {
+  font-family: 'Bebas Neue', 'Oswald', sans-serif;
+  font-size: clamp(20px, 3vw, 28px);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #ffffff;
+}
+
+.cinema-fullscreen-close {
+  padding: 8px 16px;
+  border: 1px solid #e31b23;
+  background: rgba(227, 27, 35, 0.15);
+  color: #ffffff;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cinema-fullscreen-close-symbol {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.cinema-fullscreen-close:hover {
+  background: #e31b23;
+}
+
+/* MANDATORY: STRICTLY UNCLIPPED FULLSCREEN IMAGE */
+.cinema-fullscreen-media {
+  flex: 1;
+  min-height: 250px;
+  max-height: calc(85vh - 160px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #040203;
+  padding: 16px;
+  overflow: hidden;
+}
+
+.cinema-fullscreen-image {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.cinema-fullscreen-text-wrap {
+  padding: 16px 22px;
+  background: #110507;
+  border-top: 1px solid rgba(227, 27, 35, 0.3);
+}
+
+.cinema-fullscreen-headline {
+  font-family: 'Bebas Neue', 'Oswald', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.cinema-fullscreen-prose {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  color: #e8ded7;
+  line-height: 1.5;
+}
+
+.cinema-fullscreen-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background: #090304;
+  border-top: 1px solid rgba(227, 27, 35, 0.25);
+  color: rgba(255, 220, 220, 0.6);
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+}
+
+/* ==========================================================================
+   8. STANDALONE ADMIN TRIGGER
+   ========================================================================== */
+
+.unobtrusive-admin-trigger {
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  border: 1px solid rgba(227, 27, 35, 0.45);
+  background: #110507;
+  color: #ffcdd2;
+  cursor: pointer;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  transition: all 0.25s ease;
+  outline: none;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.85);
+}
+
+.unobtrusive-admin-trigger:hover,
+.unobtrusive-admin-trigger.is-active {
+  color: #ffffff;
+  border-color: #e31b23;
+  background: #25090e;
+  box-shadow: 0 0 16px rgba(227, 27, 35, 0.55);
+}
+
+.unobtrusive-admin-lock-icon {
+  color: #e31b23;
+  display: block;
+}
+
+.unobtrusive-admin-bullet {
+  font-size: 12px;
+  line-height: 1;
+  color: #e31b23;
+}
+
+/* ==========================================================================
+   9. STANDALONE ADMIN SIDEBAR (SPLIT-SCREEN, LIVE ACT & SEE)
+   ========================================================================== */
+
+.heist-standalone-sidebar {
+  position: relative;
+  z-index: 45;
+  width: 440px;
+  min-width: 440px;
+  max-width: 440px;
+  height: 100vh;
+  height: 100svh;
+  display: flex;
+  flex-direction: column;
+  background: #0f0507;
+  border-left: 2px solid #e31b23;
+  box-shadow: -15px 0 45px rgba(0, 0, 0, 0.95);
+  transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              min-width 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.heist-standalone-sidebar.is-collapsed {
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: 0 !important;
+  border-left-color: transparent;
+  transform: translateX(100%);
+  pointer-events: none;
+  visibility: hidden;
+  overflow: hidden;
+}
+
+.heist-standalone-sidebar.is-open {
+  transform: translateX(0);
+  pointer-events: auto;
+  visibility: visible;
+}
+
+@media (max-width: 960px) {
+  .heist-standalone-sidebar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(440px, 94vw);
+    min-width: min(440px, 94vw);
+    max-width: 100vw;
   }
 }
 
-/* ---------- Control page ---------- */
-a.btn { text-decoration: none; }
-.ctl { min-height: 100vh; display: flex; flex-direction: column; }
-.ctl-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px clamp(16px, 4vw, 32px); border-bottom: 1px solid var(--line); background: rgba(6, 4, 4, 0.9); position: sticky; top: 0; z-index: 10; }
-.ctl-logo { height: 40px; width: auto; display: block; }
-.ctl-top-right { display: flex; align-items: center; gap: 14px; }
-.ctl-main { width: 100%; max-width: 820px; margin: 0 auto; padding: 24px 16px 80px; }
-.ctl-signin { max-width: 420px; margin: 8vh auto 0; display: flex; flex-direction: column; gap: 14px; }
-.ctl-signin .panel-title { font-size: 40px; }
-.ctl-link { color: var(--muted); font-size: 13px; text-decoration: none; text-align: center; }
-.ctl-link:hover { color: var(--red-2); }
-.mb { margin-bottom: 16px; }
-.mt-sm { margin-top: 10px; }
-.field-wide { grid-column: span 2; }
+.heist-sidebar__inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-height: 100vh;
+  max-height: 100svh;
+  overflow: hidden;
+  width: 100%;
+}
+
+.heist-sidebar__header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 2px solid #e31b23;
+  background: #150608;
+}
+
+.heist-sidebar__title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.heist-sidebar__bullet {
+  color: #e31b23;
+  font-size: 11px;
+}
+
+.heist-sidebar__title {
+  font-family: 'Bebas Neue', 'Oswald', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #ffffff;
+  margin: 0;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.heist-sidebar__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.heist-sidebar__logout-link {
+  padding: 5px 10px;
+  border: 1px solid rgba(227, 27, 35, 0.6);
+  background: rgba(227, 27, 35, 0.2);
+  color: #ffccd0;
+  font-family: 'Oswald', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.heist-sidebar__logout-link:hover {
+  background: #e31b23;
+  color: #ffffff;
+}
+
+.heist-sidebar__close-btn {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(0, 0, 0, 0.4);
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  transition: all 0.2s ease;
+}
+
+.heist-sidebar__close-btn:hover {
+  background: #e31b23;
+  border-color: #e31b23;
+}
+
+.heist-sidebar__body,
+.heist-sidebar__login-pane,
+.heist-sidebar__console-pane {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  scrollbar-width: thin;
+  scrollbar-color: #e31b23 #110507;
+}
+
+.heist-sidebar__login-pane::-webkit-scrollbar,
+.heist-sidebar__console-pane::-webkit-scrollbar,
+.heist-sidebar__body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.heist-sidebar__login-pane::-webkit-scrollbar-track,
+.heist-sidebar__console-pane::-webkit-scrollbar-track,
+.heist-sidebar__body::-webkit-scrollbar-track {
+  background: #0f0507;
+}
+
+.heist-sidebar__login-pane::-webkit-scrollbar-thumb,
+.heist-sidebar__console-pane::-webkit-scrollbar-thumb,
+.heist-sidebar__body::-webkit-scrollbar-thumb {
+  background: #e31b23;
+  border-radius: 2px;
+}
+
+.heist-sidebar__banner-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  background: rgba(227, 27, 35, 0.12);
+  border-left: 3px solid #e31b23;
+  font-family: 'Oswald', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: #ffb4b9;
+}
+
+.heist-sidebar__quick-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.heist-sidebar__presets {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.heist-sidebar__presets-btns {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.heist-preset-btn {
+  padding: 6px 8px;
+  background: #18090c;
+  border: 1px solid rgba(227, 27, 35, 0.3);
+  color: #ffffff;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.heist-preset-btn:hover:not(:disabled) {
+  background: rgba(227, 27, 35, 0.25);
+  border-color: #e31b23;
+}
+
+.heist-preset-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.heist-login-key-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(227, 27, 35, 0.12);
+  border: 1px solid rgba(227, 27, 35, 0.35);
+  margin-bottom: 18px;
+}
+
+.heist-login-key-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.heist-login-key-label {
+  font-family: 'Oswald', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: #e31b23;
+}
+
+.heist-login-key-code {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: #ffffff;
+}
+
+.heist-login-autofill-btn {
+  padding: 5px 10px;
+  background: rgba(227, 27, 35, 0.35);
+  border: 1px solid #e31b23;
+  color: #ffffff;
+  font-family: 'Oswald', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.heist-login-autofill-btn:hover {
+  background: #e31b23;
+}
+
+
+
+.heist-admin-status-bar {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  padding: 10px;
+  background: #18090c;
+  border: 1px solid rgba(227, 27, 35, 0.25);
+  margin-bottom: 16px;
+}
+
+.heist-admin-status-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.heist-admin-status-item span {
+  font-family: 'Oswald', sans-serif;
+  font-size: 8px;
+  letter-spacing: 0.16em;
+  color: rgba(255, 220, 220, 0.6);
+}
+
+.heist-admin-status-item b {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: #ffffff;
+}
+
+.heist-status-pill {
+  color: #e31b23 !important;
+  font-weight: 700;
+}
+
+.heist-status-pill--running {
+  color: #00e676 !important;
+}
+
+.heist-status-pill--completed {
+  color: #ff3d00 !important;
+}
+
+.heist-admin-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid rgba(227, 27, 35, 0.35);
+  margin-bottom: 16px;
+}
+
+.heist-admin-tab {
+  flex: 1;
+  padding: 8px 6px;
+  border: 1px solid transparent;
+  border-bottom: none;
+  background: transparent;
+  color: rgba(255, 220, 220, 0.65);
+  font-family: 'Oswald', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+}
+
+.heist-admin-tab--active {
+  color: #ffffff;
+  background: #1a080b;
+  border-color: rgba(227, 27, 35, 0.5);
+}
+
+.heist-admin-banner {
+  padding: 8px 12px;
+  margin-bottom: 14px;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+}
+
+.heist-admin-banner--success {
+  background: rgba(0, 230, 118, 0.12);
+  border: 1px solid #00e676;
+  color: #69f0ae;
+}
+
+.heist-admin-banner--error {
+  background: rgba(227, 27, 35, 0.15);
+  border: 1px solid #e31b23;
+  color: #ff8a80;
+}
+
+.heist-admin-tab-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.heist-admin-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.heist-admin-label {
+  font-family: 'Oswald', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: #e31b23;
+  text-transform: uppercase;
+}
+
+.heist-admin-time-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+.heist-admin-input-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.heist-admin-input-wrap input {
+  padding: 8px;
+  background: #080304;
+  border: 1px solid rgba(227, 27, 35, 0.35);
+  color: #ffffff;
+  font-family: 'DM Mono', monospace;
+  font-size: 16px;
+  font-weight: 700;
+  text-align: center;
+  outline: none;
+}
+
+.heist-admin-input-wrap span {
+  font-family: 'Oswald', sans-serif;
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  color: rgba(255, 220, 220, 0.6);
+  text-align: center;
+}
+
+.heist-admin-text-input,
+.heist-admin-textarea {
+  width: 100%;
+  padding: 8px 10px;
+  background: #080304;
+  border: 1px solid rgba(227, 27, 35, 0.35);
+  color: #ffffff;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  outline: none;
+}
+
+.heist-admin-textarea {
+  resize: vertical;
+}
+
+.heist-admin-format-radios {
+  display: flex;
+  gap: 12px;
+}
+
+.heist-admin-format-radios label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.heist-admin-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  background: #18090c;
+  border: 1px dashed rgba(227, 27, 35, 0.6);
+  color: #ffffff;
+  font-family: 'Oswald', sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  cursor: pointer;
+}
+
+.hidden-file-input {
+  display: none;
+}
+
+/* Mode toggle in Sidebar */
+.heist-sidebar__mode-toggle {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.heist-sidebar__mode-btn {
+  flex: 1;
+  background: #140608;
+  border: 1px solid rgba(227, 27, 35, 0.35);
+  color: rgba(255, 255, 255, 0.7);
+  font-family: 'Oswald', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  padding: 8px 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.heist-sidebar__mode-btn:hover {
+  background: rgba(227, 27, 35, 0.25);
+  color: #ffffff;
+}
+
+.heist-sidebar__mode-btn.is-active {
+  background: #e31b23;
+  color: #ffffff;
+  border-color: #ff3b44;
+}
+
+.heist-admin-duration-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+.heist-admin-number-input {
+  width: 100%;
+  padding: 8px 6px;
+  background: #080304;
+  border: 1px solid rgba(227, 27, 35, 0.35);
+  color: #ffffff;
+  font-family: 'DM Mono', monospace;
+  font-size: 15px;
+  font-weight: 700;
+  text-align: center;
+  outline: none;
+}
+
+.heist-admin-target-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Helper note required by Section 10 */
+.heist-admin-size-guide {
+  padding: 8px 10px;
+  background: rgba(227, 27, 35, 0.08);
+  border-left: 2px solid #e31b23;
+  font-size: 10px;
+  line-height: 1.4;
+  color: #ffccd0;
+}
+
+/* SECTION 9: DYNAMIC IMAGE SIZE HELPER */
+.heist-admin-image-size-helper {
+  background: #120507;
+  border: 1px solid #e31b23;
+  padding: 12px 14px;
+  margin: 10px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.85);
+}
+
+.heist-image-helper-badge {
+  color: #e31b23;
+  font-family: 'Oswald', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  border-bottom: 1px solid rgba(227, 27, 35, 0.3);
+  padding-bottom: 4px;
+  margin-bottom: 4px;
+}
+
+.heist-image-helper-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+}
+
+.heist-image-helper-key {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.heist-image-helper-val {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.heist-image-helper-note {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(227, 27, 35, 0.35);
+  color: #ffb4b9;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+.heist-admin-preview-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.heist-admin-preview-label {
+  font-family: 'Oswald', sans-serif;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: rgba(255, 220, 220, 0.6);
+}
+
+.heist-admin-preview-box {
+  width: 100%;
+  height: 160px;
+  background: #040203;
+  border: 1px solid rgba(227, 27, 35, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+}
+
+.heist-admin-preview-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* Button styles */
+.heist-admin-btn {
+  padding: 10px 14px;
+  border: 1px solid #e31b23;
+  background: transparent;
+  color: #ffffff;
+  font-family: 'Oswald', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.heist-admin-btn:hover:not(:disabled) {
+  background: #e31b23;
+}
+
+.heist-admin-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.heist-admin-btn--start,
+.heist-admin-btn--save {
+  background: #a80f1a;
+}
+
+.heist-admin-btn--logout {
+  padding: 4px 10px;
+  font-size: 10px;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.heist-admin-action-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.heist-admin-emergency-section {
+  padding-top: 14px;
+  border-top: 1px solid rgba(227, 27, 35, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.heist-admin-emergency-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.heist-admin-btn--emergency {
+  border-color: #ff3d00;
+  color: #ff6e40;
+}
+
+.heist-admin-btn--emergency:hover:not(:disabled) {
+  background: #ff3d00;
+  color: #fff;
+}
+
+.heist-admin-audit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.heist-admin-audit-row {
+  padding: 8px 10px;
+  background: #0a0405;
+  border-left: 2px solid #e31b23;
+}
+
+.heist-admin-audit-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+.heist-admin-audit-action {
+  font-family: 'Oswald', sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: #e31b23;
+}
+
+.heist-admin-audit-time {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: rgba(255, 220, 220, 0.5);
+}
+
+.heist-admin-audit-details {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: #e0d5ce;
+  margin-bottom: 2px;
+}
+
+.heist-admin-audit-user {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  color: rgba(255, 220, 220, 0.4);
+}
+
+/* ==========================================================================
+   10. RESPONSIVE BREAKPOINTS (PROJECTOR & MOBILE)
+   ========================================================================== */
+
 @media (max-width: 640px) {
-  .ctl-logo { height: 30px; }
-  .ctl-top-right .kicker { display: none; }
-  .form-grid { grid-template-columns: 1fr; }
-  .form-grid .field:has(textarea), .field-wide { grid-column: auto; }
-  .hms { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .panel-head { flex-direction: column; }
+  .countdown-container {
+    gap: 8px;
+  }
+
+  .countdown__digit-group {
+    padding-right: 18px;
+  }
+
+  .countdown__digits {
+    font-size: clamp(42px, 12vw, 68px);
+  }
+
+  .countdown__label {
+    font-size: 9px;
+    bottom: 2px;
+  }
+
+  .countdown__divider {
+    font-size: 36px;
+    padding: 0 1px;
+  }
+
+  .envelope-cinema-viewport {
+    width: min(94vw, 380px);
+    margin-top: 24px;
+  }
+
+  .envelope-heist-structure {
+    height: clamp(210px, 30vh, 250px);
+  }
+
+  .heist-admin-drawer {
+    right: 8px;
+    bottom: 40px;
+    width: calc(100vw - 16px);
+    padding: 16px;
+  }
+}
+
+@media (min-height: 850px) {
+  .heist-public-composition {
+    padding-top: 42px;
+  }
+
+  .envelope-cinema-viewport {
+    margin-top: 48px;
+  }
 }

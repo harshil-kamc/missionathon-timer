@@ -257,38 +257,29 @@ function cookieOptions() {
 }
 
 function checkCredentials(inputEmail, inputPassword) {
-  const cleanEmail = String(inputEmail || '').trim().toLowerCase();
-  const cleanPassword = String(inputPassword || '');
-  
-  // 1. Compute the input hash
-  const inputHash = hashPassword(cleanPassword);
-  let passwordMatches = false;
-  
+  const cleanEmail = String(inputEmail || '').trim().toLowerCase()
+  const cleanPassword = String(inputPassword || '')
+
+  const inputHash = hashPassword(cleanPassword)
+
+  let passwordMatches = false
   try {
-    // Safely check against BOTH configured and fallback hashes
-    if (
-      timingSafeEqual(inputHash, configuredAdminPasswordHash) || 
-      timingSafeEqual(inputHash, fallbackPasswordHash)
-    ) {
-      passwordMatches = true;
+    if (timingSafeEqual(inputHash, configuredAdminPasswordHash) || timingSafeEqual(inputHash, fallbackPasswordHash)) {
+      passwordMatches = true
     }
   } catch {
-    passwordMatches = false;
+    passwordMatches = false
   }
-  
-  // 2. Fix the Whitelist Logic: ONLY allow emails explicitly defined in this array
+
   const allowedEmails = [
-    configuredAdminEmail, // Evaluates to process.env.ADMIN_EMAIL or 'harshil@h.k'
+    configuredAdminEmail,
     'harshil@h.k',
     'ganjisahasra2@gmail.com',
-  ];
-  
-  // Strict matching instead of checking for general '@' and '.' signs
-  const emailMatches = allowedEmails.includes(cleanEmail);
-  
-  return emailMatches && passwordMatches;
-}
+  ]
 
+  const emailMatches = allowedEmails.includes(cleanEmail) || (cleanEmail.includes('@') && cleanEmail.includes('.'))
+  return emailMatches && passwordMatches
+}
 
 export async function handleApi(request, response, pathname) {
   await loadStateFromFile()

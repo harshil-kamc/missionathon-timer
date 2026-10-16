@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Background from './Background'
 import CountdownTimer from './CountdownTimer'
 import TwistedEnvelope from './TwistedEnvelope'
+import AdminSidebar from './AdminSidebar'
+import type { AdminState } from './SettingsPanel'
 
 const missionathonLogo = encodeURI('/WhatsApp Image 2026-10-06 at 10.12.02 PM.jpeg')
 
@@ -40,10 +42,58 @@ const DEFAULT_PUBLIC_STATE: PublicEventState = {
   },
 }
 
+let inMemoryAdminToken: string | null = null
+
+function getStoredToken(): string | null {
+  if (inMemoryAdminToken) return inMemoryAdminToken
+  try {
+    if (typeof window !== 'undefined') {
+      const stored =
+        localStorage.getItem('missionathon_token') || sessionStorage.getItem('missionathon_token')
+      if (stored) {
+        inMemoryAdminToken = stored
+        return stored
+      }
+    }
+  } catch {
+    // Storage restricted in sandboxed iframe environment
+  }
+  return null
+}
+
+function setStoredToken(token: string | null) {
+  inMemoryAdminToken = token
+  try {
+    if (typeof window !== 'undefined') {
+      if (token) {
+        localStorage.setItem('missionathon_token', token)
+        sessionStorage.setItem('missionathon_token', token)
+      } else {
+        localStorage.removeItem('missionathon_token')
+        sessionStorage.removeItem('missionathon_token')
+      }
+    }
+  } catch {
+    // Storage restricted
+  }
+}
+
 async function requestJson<T>(url: string, options?: RequestInit): Promise<T> {
+  const token = getStoredToken()
+
+  const headers = new Headers(options?.headers)
+  if (!headers.has('Content-Type') && !(options?.body instanceof FormData)) {
+    headers.set('Content-Type', 'application/json')
+  }
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`)
+    headers.set('X-Admin-Token', token)
+  }
+
   const response = await fetch(url, {
     ...options,
     credentials: 'include',
+    headers,
   })
 
   let result: any = {}
@@ -64,6 +114,9 @@ async function requestJson<T>(url: string, options?: RequestInit): Promise<T> {
 export default function Dashboard() {
   const [eventState, setEventState] = useState<PublicEventState>(DEFAULT_PUBLIC_STATE)
   const [serverTimeOffset, setServerTimeOffset] = useState<number>(0)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [adminState, setAdminState] = useState<AdminState | null>(null)
+  const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const eventSourceRef = useRef<EventSource | null>(null)
 
@@ -76,7 +129,24 @@ export default function Dashboard() {
     setIsLoading(false)
   }, [])
 
-  // Initial State Fetch and SSE Real-time Synchronizer
+  // Check Admin Session and Load Admin State if Authenticated
+  const refreshAdminState = useCallback(async () => {
+    try {
+      const session = await requestJson<{ isAdmin: boolean }>('/api/session')
+      setIsAdmin(session.isAdmin)
+      if (session.isAdmin) {
+        const fullAdmin = await requestJson<AdminState>('/api/admin/event-state')
+        setAdminState(fullAdmin)
+      } else {
+        setAdminState(null)
+      }
+    } catch {
+      setIsAdmin(false)
+      setAdminState(null)
+    }
+  }, [])
+
+  // 1. Initial State Fetch and SSE Real-time Synchronizer
   useEffect(() => {
     let isCancelled = false
 
@@ -88,6 +158,9 @@ export default function Dashboard() {
         }
       } catch (err) {
         console.error('Initial state fetch error:', err)
+      }
+      if (!isCancelled) {
+        await refreshAdminState()
       }
     }
 
@@ -137,12 +210,95 @@ export default function Dashboard() {
         eventSourceRef.current = null
       }
     }
-  }, [applyStatePayload])
+  }, [applyStatePayload, refreshAdminState])
+
+  // Admin Actions
+  const handleTimerControl = async (
+    action: string,
+    hours?: number,
+    minutes?: number,
+    seconds?: number,
+    extra?: Record<string, any>
+  ) => {
+    const updated = await requestJson<AdminState>('/api/admin/timer-control', {
+      method: 'POST',
+      body: JSON.stringify({ action, hours, minutes, seconds, ...extra }),
+    })
+    setAdminState(updated)
+    applyStatePayload(updated as unknown as PublicEventState)
+  }
+
+  const handleSaveMissionContent = async (content: {
+    title: string
+    text: string
+    image: string
+    revealType: 'image' | 'text' | 'both'
+  }) => {
+    const updated = await requestJson<AdminState>('/api/admin/mission-content', {
+      method: 'POST',
+      body: JSON.stringify(content),
+    })
+    setAdminState(updated)
+    applyStatePayload(updated as unknown as PublicEventState)
+  }
+
+  const handleUploadImage = async (base64Data: string, filename: string) => {
+    const res = await requestJson<{ adminState: AdminState }>('/api/admin/upload-image', {
+      method: 'POST',
+      body: JSON.stringify({ base64Data, filename }),
+    })
+    if (res.adminState) {
+      setAdminState(res.adminState)
+      applyStatePayload(res.adminState as unknown as PublicEventState)
+    }
+  }
+
+  const handleLogin = async (email: string, password: string) => {
+    const res = await requestJson<{ isAdmin: boolean; token?: string; error?: string }>('/api/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    })
+
+    if (!res.isAdmin && !res.token) {
+      throw new Error(res.error || 'Authentication denied. Verify credentials.')
+    }
+
+    if (res.token) {
+      setStoredToken(res.token)
+    }
+
+    try {
+      const fullAdmin = await requestJson<AdminState>('/api/admin/event-state', {
+        headers: res.token
+          ? { Authorization: `Bearer ${res.token}`, 'X-Admin-Token': res.token }
+          : {},
+      })
+      setAdminState(fullAdmin)
+    } catch {
+      // If fetching full admin state has an issue, construct minimal admin state
+      setAdminState((prev) => prev || (eventState as unknown as AdminState))
+    }
+
+    setIsAdmin(true)
+    setIsAdminPanelOpen(true)
+  }
+
+  const handleLogout = async () => {
+    try {
+      await requestJson<{ isAdmin: boolean }>('/api/logout', { method: 'POST' })
+    } catch {
+      // Ignore
+    }
+    setStoredToken(null)
+    setIsAdmin(false)
+    setAdminState(null)
+    setIsAdminPanelOpen(false)
+  }
 
   const isRevealedMode = eventState.isRevealed || eventState.status === 'completed'
 
   return (
-    <div className="heist-app-wrapper">
+    <div className={`heist-app-wrapper ${isAdminPanelOpen ? 'heist-app-wrapper--sidebar-open' : ''}`}>
       {/* Full-screen Money Heist atmosphere */}
       <Background />
 
@@ -159,7 +315,7 @@ export default function Dashboard() {
           />
         </header>
 
-        {/* Public Display Area (Watch-only full screen countdown experience) */}
+        {/* Public Display Area (No generic cards, no boxes around timer!) */}
         {isLoading ? (
           <div className="heist-loading-text">SYNCHRONIZING WITH MISSIONATHON SERVER...</div>
         ) : (
@@ -204,7 +360,50 @@ export default function Dashboard() {
             </AnimatePresence>
           </div>
         )}
+
+        {/* Unobtrusive Admin Sidebar Trigger */}
+        <button
+          type="button"
+          className={`unobtrusive-admin-trigger ${isAdminPanelOpen ? 'is-active' : ''}`}
+          onClick={() => setIsAdminPanelOpen(!isAdminPanelOpen)}
+          title={isAdminPanelOpen ? 'Collapse Admin Sidebar' : 'Admin Command Access'}
+          aria-label="Admin Access"
+        >
+          <svg
+            className="unobtrusive-admin-lock-icon"
+            width="11"
+            height="12"
+            viewBox="0 0 12 14"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true"
+          >
+            <rect x="1" y="5" width="10" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.6" />
+            <path
+              d="M3.5 5V3.5C3.5 2.11929 4.61929 1 6 1C7.38071 1 8.5 2.11929 8.5 3.5V5"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+            />
+          </svg>
+          <span className="unobtrusive-admin-text">
+            {isAdminPanelOpen ? 'CLOSE SIDEBAR' : isAdmin ? 'COMMAND CONSOLE' : 'ADMIN'}
+          </span>
+        </button>
       </main>
+
+      {/* Standalone Admin Sidebar (Not a popup! Direct split-screen live control) */}
+      <AdminSidebar
+        isOpen={isAdminPanelOpen}
+        isAdmin={isAdmin}
+        adminState={adminState || (eventState as unknown as AdminState)}
+        onClose={() => setIsAdminPanelOpen(false)}
+        onLogin={handleLogin}
+        onLogout={handleLogout}
+        onTimerControl={handleTimerControl}
+        onSaveMissionContent={handleSaveMissionContent}
+        onUploadImage={handleUploadImage}
+      />
     </div>
   )
 }
